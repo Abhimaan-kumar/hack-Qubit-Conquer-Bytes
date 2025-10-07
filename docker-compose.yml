@@ -44,7 +44,7 @@ services:
     volumes:
       - uploads_data:/app/uploads
     ports:
-      - "5001:5000"
+      - "5000:5000"
     depends_on:
       mongodb:
         condition: service_healthy
@@ -61,6 +61,8 @@ services:
     build:
       context: ./Frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:5000/api
     container_name: tax-assistant-frontend
     restart: unless-stopped
     ports:
@@ -70,8 +72,6 @@ services:
         condition: service_healthy
     networks:
       - tax-network
-    environment:
-      - VITE_API_BASE_URL=http://localhost:5000/api
 
   # Redis Cache (Optional)
   redis:

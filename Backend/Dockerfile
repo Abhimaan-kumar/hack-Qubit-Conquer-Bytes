@@ -17,7 +17,7 @@ COPY . .
 RUN mkdir -p uploads
 
 # Expose port
-EXPOSE 5001
+EXPOSE 5000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

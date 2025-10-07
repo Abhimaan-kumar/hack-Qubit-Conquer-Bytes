@@ -10,9 +10,7 @@ try {
 }
 
 if (!API_BASE_URL) {
-  API_BASE_URL = window.location.hostname === 'localhost'
-    ? 'http://localhost:5001/api'
-    : `${window.location.protocol}//${window.location.hostname}:5001/api`;
+  API_BASE_URL = '/api';
 }
 
 // API client with error handling
