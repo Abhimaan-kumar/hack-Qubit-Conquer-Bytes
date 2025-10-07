@@ -10,7 +10,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
-        content: resolve(__dirname, 'src/content/content-main.jsx'),
+        content: resolve(__dirname, 'src/content/contentScript.js'),
+        overlay: resolve(__dirname, 'src/content/overlay/index.jsx'),
       },
       output: {
         entryFileNames: '[name].js',
