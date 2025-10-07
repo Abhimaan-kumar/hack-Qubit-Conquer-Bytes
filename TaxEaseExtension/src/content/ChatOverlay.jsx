@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { io } from 'socket.io-client';
 import ChatBubble from '../components/ChatBubble';
 import Tooltip from '../components/Tooltip';
+
+// Import socket.io-client
+import { io } from 'socket.io-client';
 
 const ChatOverlay = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -44,31 +46,74 @@ const ChatOverlay = () => {
     setIsTyping(true);
 
     // Send message via socket.io
-    if (socketRef.current) {
-      socketRef.current.emit('user-message', {
-        message: inputValue,
-        timestamp: new Date().toISOString(),
-      });
+    try {
+      if (socketRef.current && socketRef.current.connected) {
+        socketRef.current.emit('user-message', {
+          message: inputValue,
+          timestamp: new Date().toISOString(),
+        });
+      } else {
+        // Fallback: simulate response if no socket connection
+        setTimeout(() => {
+          const fallbackResponse = {
+            id: messages.length + 1,
+            text: "I'm currently offline. Please check your connection and try again.",
+            isUser: false,
+          };
+          setMessages((prev) => [...prev, fallbackResponse]);
+          setIsTyping(false);
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      setIsTyping(false);
     }
   };
 
   // Handle file upload
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
-    if (file && socketRef.current) {
+    if (file) {
       setIsTyping(true);
       
-      // Send file via socket.io
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        socketRef.current.emit('file-upload', {
-          fileName: file.name,
-          fileData: event.target.result,
-          fileType: file.type,
-          timestamp: new Date().toISOString(),
-        });
-      };
-      reader.readAsDataURL(file);
+      try {
+        // Send file via socket.io
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            if (socketRef.current && socketRef.current.connected) {
+              socketRef.current.emit('file-upload', {
+                fileName: file.name,
+                fileData: event.target.result,
+                fileType: file.type,
+                timestamp: new Date().toISOString(),
+              });
+            } else {
+              // Fallback: simulate file processing if no socket connection
+              setTimeout(() => {
+                const fallbackResponse = {
+                  id: messages.length + 1,
+                  text: "📄 File uploaded successfully! Processing is currently offline.",
+                  isUser: false,
+                };
+                setMessages((prev) => [...prev, fallbackResponse]);
+                setIsTyping(false);
+              }, 1500);
+            }
+          } catch (error) {
+            console.error('Error processing file:', error);
+            setIsTyping(false);
+          }
+        };
+        reader.onerror = () => {
+          console.error('Error reading file');
+          setIsTyping(false);
+        };
+        reader.readAsDataURL(file);
+      } catch (error) {
+        console.error('Error handling file upload:', error);
+        setIsTyping(false);
+      }
     }
   };
 
@@ -99,36 +144,54 @@ const ChatOverlay = () => {
 
   // Initialize socket connection
   useEffect(() => {
-    // Connect to your socket.io server
-    socketRef.current = io('http://localhost:3001'); // Change this to your server URL
+    if (!io) {
+      console.warn('Socket.io not available, running in offline mode');
+      setConnectionStatus('Offline Mode');
+      return;
+    }
 
-    socketRef.current.on('connect', () => {
-      console.log('Connected to server');
-    });
+    try {
+      // Connect to your socket.io server
+      socketRef.current = io('http://localhost:3001'); // Change this to your server URL
 
-    socketRef.current.on('ai-response', (data) => {
-      setIsTyping(false);
-      const aiResponse = {
-        id: messages.length + 1,
-        text: data.message,
-        isUser: false,
-      };
-      setMessages((prev) => [...prev, aiResponse]);
-    });
+      socketRef.current.on('connect', () => {
+        console.log('Connected to server');
+        setConnectionStatus('Connected');
+      });
 
-    socketRef.current.on('file-processed', (data) => {
-      setIsTyping(false);
-      const fileResponse = {
-        id: messages.length + 1,
-        text: `📄 ${data.summary}`,
-        isUser: false,
-      };
-      setMessages((prev) => [...prev, fileResponse]);
-    });
+      socketRef.current.on('ai-response', (data) => {
+        setIsTyping(false);
+        const aiResponse = {
+          id: messages.length + 1,
+          text: data.message,
+          isUser: false,
+        };
+        setMessages((prev) => [...prev, aiResponse]);
+      });
 
-    socketRef.current.on('disconnect', () => {
-      console.log('Disconnected from server');
-    });
+      socketRef.current.on('file-processed', (data) => {
+        setIsTyping(false);
+        const fileResponse = {
+          id: messages.length + 1,
+          text: `📄 ${data.summary}`,
+          isUser: false,
+        };
+        setMessages((prev) => [...prev, fileResponse]);
+      });
+
+      socketRef.current.on('disconnect', () => {
+        console.log('Disconnected from server');
+        setConnectionStatus('Disconnected');
+      });
+
+      socketRef.current.on('connect_error', (error) => {
+        console.error('Socket connection error:', error);
+        setConnectionStatus('Connection Error');
+      });
+    } catch (error) {
+      console.error('Failed to initialize socket connection:', error);
+      setConnectionStatus('Socket Error');
+    }
 
     return () => {
       if (socketRef.current) {
@@ -139,29 +202,41 @@ const ChatOverlay = () => {
 
   // Drag functionality
   const handleMouseDown = (e) => {
-    if (e.target.closest('.drag-handle')) {
-      setIsDragging(true);
-      const rect = chatRef.current.getBoundingClientRect();
-      setDragOffset({
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-      });
+    try {
+      if (e.target.closest('.drag-handle')) {
+        setIsDragging(true);
+        const rect = chatRef.current?.getBoundingClientRect();
+        if (rect) {
+          setDragOffset({
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error in handleMouseDown:', error);
+      setIsDragging(false);
     }
   };
 
   const handleMouseMove = (e) => {
-    if (isDragging) {
-      const newX = e.clientX - dragOffset.x;
-      const newY = e.clientY - dragOffset.y;
-      
-      // Keep chat within viewport bounds
-      const maxX = window.innerWidth - 400;
-      const maxY = window.innerHeight - 520;
-      
-      setPosition({
-        x: Math.max(0, Math.min(newX, maxX)),
-        y: Math.max(0, Math.min(newY, maxY)),
-      });
+    if (isDragging && chatRef.current) {
+      try {
+        const newX = e.clientX - dragOffset.x;
+        const newY = e.clientY - dragOffset.y;
+        
+        // Keep chat within viewport bounds
+        const maxX = Math.max(0, window.innerWidth - 400);
+        const maxY = Math.max(0, window.innerHeight - 520);
+        
+        setPosition({
+          x: Math.max(0, Math.min(newX, maxX)),
+          y: Math.max(0, Math.min(newY, maxY)),
+        });
+      } catch (error) {
+        console.error('Error in handleMouseMove:', error);
+        setIsDragging(false);
+      }
     }
   };
 

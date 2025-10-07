@@ -5,9 +5,7 @@ import { resolve } from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(),
-        tailwindcss(),
-  ],
+  plugins: [react(), tailwindcss()],
   build: {
     rollupOptions: {
       input: {
@@ -16,11 +14,12 @@ export default defineConfig({
       },
       output: {
         entryFileNames: '[name].js',
-        chunkFileNames: '[name].js',
-        assetFileNames: '[name].[ext]'
+        chunkFileNames: 'chunks/[name].js',
+        assetFileNames: '[name].[ext]',
       }
     },
     outDir: 'dist',
-    emptyOutDir: true
+    emptyOutDir: true,
+    sourcemap: false,
   }
 });
