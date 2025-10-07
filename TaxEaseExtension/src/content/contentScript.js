@@ -35,7 +35,7 @@ if (!document.getElementById('taxease-chat-root')) {
   document.body.appendChild(rootContainer);
 
   // Import and render React component
-  import('./overlay/index.js')
+  import('./overlay/index.jsx')
     .then(() => {
       console.log('[TaxEase] Extension loaded successfully!');
     })
