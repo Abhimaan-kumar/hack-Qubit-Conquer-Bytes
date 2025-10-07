@@ -27,40 +27,40 @@ const Popup = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-white">
+    <div className="flex flex-col h-screen bg-gradient-to-br from-blue-50 to-white neumorphic-inset">
       {/* Header */}
-      <div className="bg-blue-600 text-white p-4 rounded-t-lg">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 rounded-t-lg shadow-lg">
         <div className="flex items-center">
-          <div className="bg-white text-blue-600 rounded-full w-8 h-8 flex items-center justify-center mr-2">
+          <div className="bg-white text-blue-600 rounded-full w-10 h-10 flex items-center justify-center mr-3 shadow-md neumorphic">
             🇮🇳
           </div>
-          <h1 className="text-lg font-bold">TaxEase AI Assistant</h1>
+          <h1 className="text-xl font-bold">TaxEase AI Assistant</h1>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-4 overflow-y-auto">
-        <div className="mb-6">
-          <h2 className="text-md font-semibold mb-2">Assistant Controls</h2>
-          <div className="flex space-x-2">
+      <div className="flex-1 p-4 overflow-y-auto custom-scrollbar">
+        <div className="mb-6 neumorphic p-4">
+          <h2 className="text-lg font-semibold mb-3 text-blue-800">Assistant Controls</h2>
+          <div className="flex space-x-3">
             <button
               onClick={handleStartAssistant}
-              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex-1 transition-colors"
+              className="neumorphic-button bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg flex-1 font-medium transition-all"
             >
-              Start Assistant
+              ▶️ Start Assistant
             </button>
             <button
               onClick={handleStopAssistant}
-              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex-1 transition-colors"
+              className="neumorphic-button bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg flex-1 font-medium transition-all"
             >
-              Stop Assistant
+              ⏹️ Stop Assistant
             </button>
           </div>
         </div>
 
-        <div className="mb-6">
-          <h2 className="text-md font-semibold mb-2">Document Upload</h2>
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+        <div className="mb-6 neumorphic p-4">
+          <h2 className="text-lg font-semibold mb-3 text-blue-800">Document Upload</h2>
+          <div className="border-2 border-dashed border-blue-300 rounded-lg p-6 text-center bg-blue-50 hover:bg-blue-100 transition-colors">
             <input
               type="file"
               id="file-upload"
@@ -70,33 +70,33 @@ const Popup = () => {
             />
             <label
               htmlFor="file-upload"
-              className="cursor-pointer text-blue-600 hover:text-blue-800"
+              className="cursor-pointer text-blue-600 hover:text-blue-800 font-medium text-lg"
             >
-              Upload Form-16 / Payslip
+              📎 Upload Form-16 / Payslip
             </label>
             {fileUploaded && (
-              <p className="mt-2 text-green-600 text-sm">
-                File uploaded successfully!
+              <p className="mt-3 text-green-600 text-sm font-medium">
+                ✅ File uploaded successfully!
               </p>
             )}
           </div>
         </div>
 
-        <div className="mb-6">
-          <h2 className="text-md font-semibold mb-2">Connection Status</h2>
+        <div className="mb-6 neumorphic p-4">
+          <h2 className="text-lg font-semibold mb-3 text-blue-800">Connection Status</h2>
           <div className="flex items-center">
             <div
-              className={`w-3 h-3 rounded-full mr-2 ${
+              className={`w-4 h-4 rounded-full mr-3 shadow-md ${
                 connectionStatus === 'Connected' ? 'bg-green-500' : 'bg-red-500'
               }`}
             ></div>
-            <span>{connectionStatus}</span>
+            <span className="font-medium">{connectionStatus}</span>
           </div>
         </div>
 
-        <div className="mb-6">
-          <h2 className="text-md font-semibold mb-2">Demo Chat</h2>
-          <div className="bg-gray-100 rounded-lg p-3 h-40 overflow-y-auto">
+        <div className="mb-6 neumorphic p-4">
+          <h2 className="text-lg font-semibold mb-3 text-blue-800">Demo Chat</h2>
+          <div className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg p-4 h-40 overflow-y-auto custom-scrollbar neumorphic-inset">
             <ChatBubble
               message="Hello! I'm your TaxEase AI Assistant. How can I help you today?"
               isUser={false}
@@ -106,7 +106,7 @@ const Popup = () => {
       </div>
 
       {/* Footer */}
-      <div className="bg-gray-100 p-3 text-center text-sm text-gray-600 border-t">
+      <div className="bg-gradient-to-r from-gray-100 to-gray-200 p-4 text-center text-sm text-gray-600 border-t shadow-inner">
         <PrivacyNotice />
       </div>
     </div>

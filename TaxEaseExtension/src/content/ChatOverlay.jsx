@@ -157,7 +157,7 @@ const ChatOverlay = () => {
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={toggleChat}
-            className="fixed bottom-6 right-6 bg-blue-600 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg z-50 hover:bg-blue-700 transition-colors"
+            className="fixed bottom-6 right-6 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-2xl z-50 hover:from-blue-700 hover:to-blue-800 transition-all neumorphic-button"
           >
             💬
           </motion.button>
@@ -171,35 +171,35 @@ const ChatOverlay = () => {
             initial={{ opacity: 0, x: 300 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 300 }}
-            className={`fixed bottom-6 right-6 w-96 h-[500px] rounded-lg shadow-xl z-50 flex flex-col ${
+            className={`fixed bottom-6 right-6 w-96 h-[500px] rounded-2xl shadow-2xl z-50 flex flex-col neumorphic ${
               darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'
             }`}
           >
             {/* Chat header */}
             <div
-              className={`flex items-center justify-between p-4 rounded-t-lg ${
-                darkMode ? 'bg-gray-700' : 'bg-blue-600 text-white'
+              className={`flex items-center justify-between p-4 rounded-t-2xl ${
+                darkMode ? 'bg-gray-700' : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white'
               }`}
             >
               <div className="flex items-center">
-                <div className="bg-white text-blue-600 rounded-full w-8 h-8 flex items-center justify-center mr-2">
+                <div className="bg-white text-blue-600 rounded-full w-10 h-10 flex items-center justify-center mr-3 shadow-md neumorphic">
                   🇮🇳
                 </div>
-                <h2 className="font-bold">TaxEase AI Assistant</h2>
+                <h2 className="font-bold text-lg">TaxEase AI Assistant</h2>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="text-xs bg-green-500 text-white px-2 py-1 rounded-full">
-                  Privacy Mode ON
+                <span className="text-xs bg-green-500 text-white px-3 py-1 rounded-full font-medium shadow-md">
+                  🔒 Privacy Mode ON
                 </span>
                 <button
                   onClick={() => setDarkMode(!darkMode)}
-                  className="p-1 rounded-full hover:bg-opacity-20 hover:bg-white"
+                  className="p-2 rounded-full hover:bg-opacity-20 hover:bg-white transition-all neumorphic-button"
                 >
                   {darkMode ? '☀️' : '🌙'}
                 </button>
                 <button
                   onClick={toggleChat}
-                  className="p-1 rounded-full hover:bg-opacity-20 hover:bg-white"
+                  className="p-2 rounded-full hover:bg-opacity-20 hover:bg-white transition-all neumorphic-button"
                 >
                   ✕
                 </button>
@@ -207,7 +207,7 @@ const ChatOverlay = () => {
             </div>
 
             {/* Chat messages */}
-            <div className={`flex-1 overflow-y-auto p-4 ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+            <div className={`flex-1 overflow-y-auto p-4 custom-scrollbar ${darkMode ? 'bg-gray-800' : 'bg-gradient-to-br from-gray-50 to-gray-100'} neumorphic-inset`}>
               {messages.map((message) => (
                 <ChatBubble
                   key={message.id}
@@ -216,8 +216,8 @@ const ChatOverlay = () => {
                 />
               ))}
               {isTyping && (
-                <div className="flex justify-start mb-3">
-                  <div className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg rounded-bl-none">
+                <div className="flex justify-start mb-4">
+                  <div className="bg-gradient-to-r from-gray-200 to-gray-300 text-gray-800 px-4 py-3 rounded-2xl rounded-bl-md neumorphic">
                     <div className="flex space-x-1">
                       <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
                       <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce delay-75"></div>
@@ -229,9 +229,9 @@ const ChatOverlay = () => {
             </div>
 
             {/* File upload and controls */}
-            <div className={`p-2 ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-xs text-gray-500">
+            <div className={`p-3 ${darkMode ? 'bg-gray-700' : 'bg-gradient-to-r from-gray-100 to-gray-200'} neumorphic-inset`}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-sm text-gray-600">
                   <input
                     type="file"
                     id="file-upload-overlay"
@@ -241,7 +241,7 @@ const ChatOverlay = () => {
                   />
                   <label
                     htmlFor="file-upload-overlay"
-                    className="cursor-pointer hover:text-blue-600"
+                    className="cursor-pointer hover:text-blue-600 font-medium transition-colors"
                   >
                     📄 Upload Form-16
                   </label>
@@ -249,15 +249,15 @@ const ChatOverlay = () => {
                 <div className="flex space-x-2">
                   <button
                     onClick={handleClearChat}
-                    className="text-xs px-2 py-1 rounded hover:bg-gray-200"
+                    className="text-sm px-3 py-1 rounded-lg hover:bg-gray-200 transition-colors neumorphic-button"
                   >
-                    Clear
+                    🗑️ Clear
                   </button>
                   <button
                     onClick={handleEndSession}
-                    className="text-xs px-2 py-1 rounded hover:bg-red-200"
+                    className="text-sm px-3 py-1 rounded-lg hover:bg-red-200 transition-colors neumorphic-button"
                   >
-                    End Session
+                    🚪 End Session
                   </button>
                 </div>
               </div>
@@ -270,16 +270,16 @@ const ChatOverlay = () => {
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Type your tax query..."
-                  className={`flex-1 rounded-l-lg p-2 text-sm focus:outline-none ${
+                  className={`flex-1 rounded-l-xl p-3 text-sm focus:outline-none neumorphic-inset ${
                     darkMode ? 'bg-gray-600 text-white' : 'bg-white text-gray-800'
                   }`}
                 />
                 <button
                   onClick={handleSend}
                   disabled={inputValue.trim() === ''}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-r-lg hover:bg-blue-700 disabled:opacity-50"
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-r-xl hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 transition-all neumorphic-button"
                 >
-                  Send
+                  📤 Send
                 </button>
               </div>
             </div>

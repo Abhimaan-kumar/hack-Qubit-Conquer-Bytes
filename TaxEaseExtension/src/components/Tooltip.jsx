@@ -27,14 +27,15 @@ const Tooltip = ({ fieldName, position }) => {
 
   return (
     <div
-      className="fixed bg-yellow-100 border border-yellow-300 text-yellow-800 text-xs rounded py-1 px-2 shadow-lg z-50 max-w-xs"
+      className="fixed bg-gradient-to-r from-yellow-100 to-yellow-200 border-2 border-yellow-300 text-yellow-900 text-sm rounded-xl py-3 px-4 shadow-xl z-50 max-w-sm neumorphic"
       style={{
         left: `${position.x}px`,
-        top: `${position.y - 40}px`,
+        top: `${position.y - 50}px`,
       }}
     >
-      <div className="font-medium">{getTooltipText(fieldName)}</div>
-      <div className="absolute bottom-0 left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-yellow-100 transform translate-y-full"></div>
+      <div className="font-semibold text-yellow-800 mb-1">💡 Tip</div>
+      <div className="leading-relaxed">{getTooltipText(fieldName)}</div>
+      <div className="absolute bottom-0 left-6 w-0 h-0 border-l-6 border-r-6 border-t-6 border-l-transparent border-r-transparent border-t-yellow-200 transform translate-y-full"></div>
     </div>
   );
 };
