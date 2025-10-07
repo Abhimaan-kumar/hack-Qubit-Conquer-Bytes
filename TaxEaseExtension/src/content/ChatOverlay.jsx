@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { io } from 'socket.io-client';
 import ChatBubble from '../components/ChatBubble';
 import Tooltip from '../components/Tooltip';
 
@@ -16,6 +17,11 @@ const ChatOverlay = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState(null);
+  const [position, setPosition] = useState({ x: window.innerWidth - 420, y: window.innerHeight - 550 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const socketRef = useRef(null);
+  const chatRef = useRef(null);
 
   // Toggle chat overlay visibility
   const toggleChat = () => {
@@ -37,54 +43,32 @@ const ChatOverlay = () => {
     setInputValue('');
     setIsTyping(true);
 
-    // Simulate AI response after delay
-    setTimeout(() => {
-      const aiResponse = {
-        id: messages.length + 2,
-        text: getMockAIResponse(inputValue),
-        isUser: false,
-      };
-      setMessages((prev) => [...prev, aiResponse]);
-      setIsTyping(false);
-    }, 1500);
-  };
-
-  // Mock AI responses
-  const getMockAIResponse = (input) => {
-    const lowerInput = input.toLowerCase();
-    
-    if (lowerInput.includes('pan')) {
-      return "Please enter your PAN number in the format: AAAAA1111A";
-    } else if (lowerInput.includes('name')) {
-      return "Enter your full name as it appears on your PAN card.";
-    } else if (lowerInput.includes('salary')) {
-      return "Enter your annual salary before tax deductions.";
-    } else if (lowerInput.includes('deduction') || lowerInput.includes('80c')) {
-      return "You can claim up to ₹1.5 lakh under Section 80C for investments.";
-    } else if (lowerInput.includes('regime')) {
-      return "Choose between the Old Tax Regime (with exemptions) and New Tax Regime (lower rates, fewer exemptions).";
-    } else if (lowerInput.includes('form-16') || lowerInput.includes('upload')) {
-      return "You can upload your Form-16 or payslip to automatically extract income details.";
-    } else {
-      return "I'm here to help with your income tax filing. You can ask about PAN, salary, deductions, tax regimes, and more!";
+    // Send message via socket.io
+    if (socketRef.current) {
+      socketRef.current.emit('user-message', {
+        message: inputValue,
+        timestamp: new Date().toISOString(),
+      });
     }
   };
 
   // Handle file upload
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      // Simulate file processing
+    if (file && socketRef.current) {
       setIsTyping(true);
-      setTimeout(() => {
-        const summaryMessage = {
-          id: messages.length + 1,
-          text: "📄 Detected Salary: ₹10,25,000 | Regime: New | Deductions: ₹75,000",
-          isUser: false,
-        };
-        setMessages([...messages, summaryMessage]);
-        setIsTyping(false);
-      }, 2000);
+      
+      // Send file via socket.io
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        socketRef.current.emit('file-upload', {
+          fileName: file.name,
+          fileData: event.target.result,
+          fileType: file.type,
+          timestamp: new Date().toISOString(),
+        });
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -112,6 +96,93 @@ const ChatOverlay = () => {
       handleSend();
     }
   };
+
+  // Initialize socket connection
+  useEffect(() => {
+    // Connect to your socket.io server
+    socketRef.current = io('http://localhost:3001'); // Change this to your server URL
+
+    socketRef.current.on('connect', () => {
+      console.log('Connected to server');
+    });
+
+    socketRef.current.on('ai-response', (data) => {
+      setIsTyping(false);
+      const aiResponse = {
+        id: messages.length + 1,
+        text: data.message,
+        isUser: false,
+      };
+      setMessages((prev) => [...prev, aiResponse]);
+    });
+
+    socketRef.current.on('file-processed', (data) => {
+      setIsTyping(false);
+      const fileResponse = {
+        id: messages.length + 1,
+        text: `📄 ${data.summary}`,
+        isUser: false,
+      };
+      setMessages((prev) => [...prev, fileResponse]);
+    });
+
+    socketRef.current.on('disconnect', () => {
+      console.log('Disconnected from server');
+    });
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+    };
+  }, []);
+
+  // Drag functionality
+  const handleMouseDown = (e) => {
+    if (e.target.closest('.drag-handle')) {
+      setIsDragging(true);
+      const rect = chatRef.current.getBoundingClientRect();
+      setDragOffset({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      });
+    }
+  };
+
+  const handleMouseMove = (e) => {
+    if (isDragging) {
+      const newX = e.clientX - dragOffset.x;
+      const newY = e.clientY - dragOffset.y;
+      
+      // Keep chat within viewport bounds
+      const maxX = window.innerWidth - 400;
+      const maxY = window.innerHeight - 520;
+      
+      setPosition({
+        x: Math.max(0, Math.min(newX, maxX)),
+        y: Math.max(0, Math.min(newY, maxY)),
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    } else {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
 
   // Simulate field focus for tooltip demo
   useEffect(() => {
@@ -168,16 +239,24 @@ const ChatOverlay = () => {
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, x: 300 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 300 }}
-            className={`fixed bottom-6 right-6 w-96 h-[500px] rounded-2xl shadow-2xl z-50 flex flex-col neumorphic ${
+            ref={chatRef}
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            style={{
+              position: 'fixed',
+              left: position.x,
+              top: position.y,
+              zIndex: 50,
+            }}
+            className={`w-96 h-[500px] rounded-2xl shadow-2xl flex flex-col neumorphic cursor-move ${
               darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'
-            }`}
+            } ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+            onMouseDown={handleMouseDown}
           >
             {/* Chat header */}
             <div
-              className={`flex items-center justify-between p-4 rounded-t-2xl ${
+              className={`drag-handle flex items-center justify-between p-4 rounded-t-2xl select-none ${
                 darkMode ? 'bg-gray-700' : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white'
               }`}
             >
@@ -198,7 +277,7 @@ const ChatOverlay = () => {
                   {darkMode ? '☀️' : '🌙'}
                 </button>
                 <button
-                  onClick={toggleChat}
+                  onClick={() => setIsOpen(false)}
                   className="p-2 rounded-full hover:bg-opacity-20 hover:bg-white transition-all neumorphic-button"
                 >
                   ✕
