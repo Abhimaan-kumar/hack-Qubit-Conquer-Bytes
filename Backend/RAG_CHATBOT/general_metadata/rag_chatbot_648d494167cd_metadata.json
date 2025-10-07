@@ -1,0 +1,295 @@
+{
+  "document_id": "rag_chatbot_648d494167cd",
+  "file_info": {
+    "file_path": "/workspaces/hack-Qubit-Conquer-Bytes/Backend/RAG_CHATBOT/rag_chatbot.py",
+    "filename": "rag_chatbot.py",
+    "file_stem": "rag_chatbot",
+    "file_extension": ".py",
+    "file_size_bytes": 17421,
+    "file_size_mb": 0.02,
+    "created_time": "2025-10-07T18:40:46.066665",
+    "modified_time": "2025-10-07T18:40:46.066665",
+    "file_hash": "648d494167cd",
+    "document_id": "rag_chatbot_648d494167cd"
+  },
+  "extraction_info": {
+    "method": "text",
+    "total_pages": 4,
+    "processed_pages": 4,
+    "success_rate": 100.0,
+    "failed_pages": [],
+    "encoding_used": "utf-8"
+  },
+  "vectorization_info": {
+    "total_chunks": 23,
+    "chunk_size": 800,
+    "chunk_overlap": 200,
+    "embedding_model": "all-MiniLM-L6-v2",
+    "processing_time": "1.03 seconds",
+    "created_at": "2025-10-07T18:55:55.937355"
+  },
+  "content_analysis": {
+    "content_types": {
+      "code": 17,
+      "definition": 6
+    },
+    "languages_detected": {
+      "py": 23
+    }
+  },
+  "chunks_metadata": [
+    {
+      "chunk_id": "rag_chatbot_648d494167cd_chunk_0001",
+      "page": 1,
+      "length": 698,
+      "file_type": ".py",
+      "content_type": "code",
+      "has_code": true,
+      "has_numbers": true,
+      "language_detected": "py",
+      "preview": "import os import json import numpy as np from sentence_transformers import Sentence Transformer from sklearn.metrics.pairwise import cosine_similarity..."
+    },
+    {
+      "chunk_id": "rag_chatbot_648d494167cd_chunk_0002",
+      "page": 1,
+      "length": 739,
+      "file_type": ".py",
+      "content_type": "code",
+      "has_code": true,
+      "has_numbers": true,
+      "language_detected": "py",
+      "preview": ".embeddings = None self.metadata = [] # Default to ITA_primary if no specific document_id is provided self.document_id = document_id if document_id el..."
+    },
+    {
+      "chunk_id": "rag_chatbot_648d494167cd_chunk_0003",
+      "page": 1,
+      "length": 673,
+      "file_type": ".py",
+      "content_type": "code",
+      "has_code": true,
+      "has_numbers": true,
+      "language_detected": "py",
+      "preview": ".py first to create the database.\") print(\"Usage: python document_vectorizer.py <pdf_file_path>\") exit(1) # Get all available document IDs vector_file..."
+    },
+    {
+      "chunk_id": "rag_chatbot_648d494167cd_chunk_0004",
+      "page": 1,
+      "length": 785,
+      "file_type": ".py",
+      "content_type": "code",
+      "has_code": true,
+      "has_numbers": false,
+      "language_detected": "py",
+      "preview": ".path.exists(os.path.join(vector_db_path, vector_file)): print(f\"⚠️ Specified database '{self.document_id}' not found. Available databases:\") for vf i..."
+    },
+    {
+      "chunk_id": "rag_chatbot_648d494167cd_chunk_0005",
+      "page": 1,
+      "length": 793,
+      "file_type": ".py",
+      "content_type": "code",
+      "has_code": true,
+      "has_numbers": true,
+      "language_detected": "py",
+      "preview": ".path.join(vector_db_path, vector_file) faiss_index_path = os.path.join(vector_dir, \"index.faiss\") chunks_path = os.path.join(vector_dir, \"index.pkl\")..."
+    },
+    {
+      "chunk_id": "rag_chatbot_648d494167cd_chunk_0006",
+      "page": 1,
+      "length": 719,
+      "file_type": ".py",
+      "content_type": "code",
+      "has_code": true,
+      "has_numbers": true,
+      "language_detected": "py",
+      "preview": ".chunks.append(\"\") # Load metadata metadata_path_full = os.path.join(metadata_path, metadata_file) with open(metadata_path_full, 'r', encoding='utf-8'..."
+    },
+    {
+      "chunk_id": "rag_chatbot_648d494167cd_chunk_0007",
+      "page": 1,
+      "length": 317,
+      "file_type": ".py",
+      "content_type": "code",
+      "has_code": true,
+      "has_numbers": true,
+      "language_detected": "py",
+      "preview": ".\") exit(1) except Exception as e: print(f\"❌ Error loading vector database: {e}\") exit(1) def find_relevant_chunks(self, query: str, top_k: int = 5, s..."
+    },
+    {
+      "chunk_id": "rag_chatbot_648d494167cd_chunk_0009",
+      "page": 2,
+      "length": 769,
+      "file_type": ".py",
+      "content_type": "code",
+      "has_code": true,
+      "has_numbers": true,
+      "language_detected": "py",
+      "preview": "of top chunks to return similarity_threshold (float): Minimum similarity score to consider Returns: List[Dict]: List of relevant chunks with metadata ..."
+    },
+    {
+      "chunk_id": "rag_chatbot_648d494167cd_chunk_0010",
+      "page": 2,
+      "length": 775,
+      "file_type": ".py",
+      "content_type": "code",
+      "has_code": true,
+      "has_numbers": true,
+      "language_detected": "py",
+      "preview": ".0 if similarity_score >= similarity_threshold: relevant_chunks.append({ 'chunk': self.chunks[idx], 'similarity': float(similarity_score), 'metadata':..."
+    },
+    {
+      "chunk_id": "rag_chatbot_648d494167cd_chunk_0011",
+      "page": 2,
+      "length": 717,
+      "file_type": ".py",
+      "content_type": "code",
+      "has_code": true,
+      "has_numbers": true,
+      "language_detected": "py",
+      "preview": ". Please try rephrasing your question or ask about topics covered in the uploaded document.\" # Create context from relevant chunks context_parts = [] ..."
+    },
+    {
+      "chunk_id": "rag_chatbot_648d494167cd_chunk_0012",
+      "page": 2,
+      "length": 683,
+      "file_type": ".py",
+      "content_type": "definition",
+      "has_code": true,
+      "has_numbers": false,
+      "language_detected": "py",
+      "preview": ".create_structured_answer(query, context, relevant_chunks) # Add source attribution source_attribution = \"\\n\\n📚 **Sources:**\\n\" + \"\\n\".join(sources) r..."
+    },
+    {
+      "chunk_id": "rag_chatbot_648d494167cd_chunk_0013",
+      "page": 2,
+      "length": 765,
+      "file_type": ".py",
+      "content_type": "definition",
+      "has_code": true,
+      "has_numbers": false,
+      "language_detected": "py",
+      "preview": ".lower() # Analyze query type if any(word in query_lower for word in ['what is', 'define', 'definition', 'meaning']): return self.create_definition_an..."
+    },
+    {
+      "chunk_id": "rag_chatbot_648d494167cd_chunk_0014",
+      "page": 2,
+      "length": 781,
+      "file_type": ".py",
+      "content_type": "definition",
+      "has_code": true,
+      "has_numbers": true,
+      "language_detected": "py",
+      "preview": ".create_calculation_answer(query, context, relevant_chunks) elif any(word in query_lower for word in ['benefit', 'advantage', 'exemption', 'deduction'..."
+    },
+    {
+      "chunk_id": "rag_chatbot_648d494167cd_chunk_0015",
+      "page": 2,
+      "length": 254,
+      "file_type": ".py",
+      "content_type": "definition",
+      "has_code": true,
+      "has_numbers": true,
+      "language_detected": "py",
+      "preview": ".split('\\n'): if line.strip() and ( 'is defined as' in line.lower() or 'means' in line.lower() or 'includes' in line.lower() or 'refers to' in line.lo..."
+    },
+    {
+      "chunk_id": "rag_chatbot_648d494167cd_chunk_0017",
+      "page": 3,
+      "length": 791,
+      "file_type": ".py",
+      "content_type": "definition",
+      "has_code": true,
+      "has_numbers": true,
+      "language_detected": "py",
+      "preview": "0).join(definition_lines)}\" else: # Use the most relevant chunk answer = f\"**Answer:**\\n\\n{top_chunk}\" # Add additional context if available if len(re..."
+    },
+    {
+      "chunk_id": "rag_chatbot_648d494167cd_chunk_0018",
+      "page": 3,
+      "length": 786,
+      "file_type": ".py",
+      "content_type": "code",
+      "has_code": true,
+      "has_numbers": true,
+      "language_detected": "py",
+      "preview": ".split('\\n') for line in lines: line = line.strip() if line and ( line[0].isdigit() or line.startswith('•') or line.startswith('-') or line.lower().st..."
+    },
+    {
+      "chunk_id": "rag_chatbot_648d494167cd_chunk_0019",
+      "page": 3,
+      "length": 723,
+      "file_type": ".py",
+      "content_type": "code",
+      "has_code": true,
+      "has_numbers": true,
+      "language_detected": "py",
+      "preview": ".lower() for word in ['example', 'for instance', 'such as', 'like']): examples.append(chunk) if examples: answer = f\"**Examples:**\\n\\n\" + \"\\n\\n\".join(..."
+    },
+    {
+      "chunk_id": "rag_chatbot_648d494167cd_chunk_0020",
+      "page": 3,
+      "length": 689,
+      "file_type": ".py",
+      "content_type": "code",
+      "has_code": true,
+      "has_numbers": true,
+      "language_detected": "py",
+      "preview": ".lower() for word in ['calculate', 'formula', 'rate', 'percentage', 'amount']): calc_info.append(chunk) if calc_info: answer = f\"**Calculation Informa..."
+    },
+    {
+      "chunk_id": "rag_chatbot_648d494167cd_chunk_0021",
+      "page": 3,
+      "length": 684,
+      "file_type": ".py",
+      "content_type": "code",
+      "has_code": true,
+      "has_numbers": true,
+      "language_detected": "py",
+      "preview": ".lower() for word in ['benefit', 'exemption', 'deduction', 'allowance', 'relief']): benefits.append(chunk) if benefits: answer = f\"**Benefits/Exemptio..."
+    },
+    {
+      "chunk_id": "rag_chatbot_648d494167cd_chunk_0022",
+      "page": 3,
+      "length": 616,
+      "file_type": ".py",
+      "content_type": "code",
+      "has_code": true,
+      "has_numbers": true,
+      "language_detected": "py",
+      "preview": ".strip() if chunk and len(chunk) > 30: # Only substantial chunks combined_chunks.append(chunk) answer = f\"**Answer:**\\n\\n\" + \"\\n\\n\".join(combined_chun..."
+    },
+    {
+      "chunk_id": "rag_chatbot_648d494167cd_chunk_0024",
+      "page": 2,
+      "length": 729,
+      "file_type": ".py",
+      "content_type": "code",
+      "has_code": true,
+      "has_numbers": true,
+      "language_detected": "py",
+      "preview": "your question. Please try rephrasing your question or ask about topics covered in the uploaded document.\" print(f\"📚 Found {len(relevant_chunks)} relev..."
+    },
+    {
+      "chunk_id": "rag_chatbot_648d494167cd_chunk_0025",
+      "page": 4,
+      "length": 793,
+      "file_type": ".py",
+      "content_type": "definition",
+      "has_code": true,
+      "has_numbers": true,
+      "language_detected": "py",
+      "preview": ".\") continue answer = self.ask(query) print(f\"\\n{answer}\") print(\"\\n\" + \"=\" * 50) except Keyboard Interrupt: print(\"\\n👋 Goodbye!\") break except Except..."
+    },
+    {
+      "chunk_id": "rag_chatbot_648d494167cd_chunk_0026",
+      "page": 4,
+      "length": 273,
+      "file_type": ".py",
+      "content_type": "code",
+      "has_code": true,
+      "has_numbers": true,
+      "language_detected": "py",
+      "preview": ". Testing: {question}\") print(\"-\" * 40) answer = chatbot.ask(question) print(answer) print(\"\\n\" + \"=\" * 60) if __name__ == \"__main__\": import sys if l..."
+    }
+  ]
+}

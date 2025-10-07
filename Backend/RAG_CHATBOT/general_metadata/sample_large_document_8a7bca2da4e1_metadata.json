@@ -1,0 +1,110 @@
+{
+  "document_id": "sample_large_document_8a7bca2da4e1",
+  "file_info": {
+    "file_path": "/workspaces/hack-Qubit-Conquer-Bytes/Backend/RAG_CHATBOT/sample_large_document.md",
+    "filename": "sample_large_document.md",
+    "file_stem": "sample_large_document",
+    "file_extension": ".md",
+    "file_size_bytes": 4520,
+    "file_size_mb": 0.0,
+    "created_time": "2025-10-07T18:55:14.861680",
+    "modified_time": "2025-10-07T18:55:14.861680",
+    "file_hash": "8a7bca2da4e1",
+    "document_id": "sample_large_document_8a7bca2da4e1"
+  },
+  "extraction_info": {
+    "method": "text",
+    "total_pages": 1,
+    "processed_pages": 1,
+    "success_rate": 100.0,
+    "failed_pages": [],
+    "encoding_used": "utf-8"
+  },
+  "vectorization_info": {
+    "total_chunks": 6,
+    "chunk_size": 1000,
+    "chunk_overlap": 200,
+    "embedding_model": "all-MiniLM-L6-v2",
+    "processing_time": "5.22 seconds",
+    "created_at": "2025-10-07T18:55:37.300313"
+  },
+  "content_analysis": {
+    "content_types": {
+      "code": 5,
+      "example": 1
+    },
+    "languages_detected": {
+      "python": 3,
+      "css": 2,
+      "natural": 1
+    }
+  },
+  "chunks_metadata": [
+    {
+      "chunk_id": "sample_large_document_8a7bca2da4e1_chunk_0001",
+      "page": 1,
+      "length": 975,
+      "file_type": ".md",
+      "content_type": "code",
+      "has_code": true,
+      "has_numbers": true,
+      "language_detected": "python",
+      "preview": "# Sample Large Document for Testing ## Introduction This is a comprehensive document that demonstrates various types of content including: - Technical..."
+    },
+    {
+      "chunk_id": "sample_large_document_8a7bca2da4e1_chunk_0002",
+      "page": 1,
+      "length": 952,
+      "file_type": ".md",
+      "content_type": "code",
+      "has_code": true,
+      "has_numbers": true,
+      "language_detected": "python",
+      "preview": ".9 | percentage | ### Code Examples #### Java Script Function ```javascript function process Data(data) { const results = data.map(item => { return { ..."
+    },
+    {
+      "chunk_id": "sample_large_document_8a7bca2da4e1_chunk_0003",
+      "page": 1,
+      "length": 964,
+      "file_type": ".md",
+      "content_type": "code",
+      "has_code": true,
+      "has_numbers": true,
+      "language_detected": "python",
+      "preview": ". Start the processing pipeline 6. Monitor the system for any errors or warnings 7. Generate reports and analytics ### Troubleshooting Guide If you en..."
+    },
+    {
+      "chunk_id": "sample_large_document_8a7bca2da4e1_chunk_0004",
+      "page": 1,
+      "length": 217,
+      "file_type": ".md",
+      "content_type": "code",
+      "has_code": true,
+      "has_numbers": true,
+      "language_detected": "css",
+      "preview": ".Dict Reader(file) for row in reader: processed_row = { 'id': int(row['id']), 'name': row['name'].strip().title(), 'value': float(row['value']) * 1.1,..."
+    },
+    {
+      "chunk_id": "sample_large_document_8a7bca2da4e1_chunk_0005",
+      "page": 1,
+      "length": 981,
+      "file_type": ".md",
+      "content_type": "code",
+      "has_code": true,
+      "has_numbers": true,
+      "language_detected": "css",
+      "preview": ".strip().title(), 'value': float(row['value']) * 1.1, # Apply 10% increase 'category': row['category'].lower() } results.append(processed_row) return ..."
+    },
+    {
+      "chunk_id": "sample_large_document_8a7bca2da4e1_chunk_0006",
+      "page": 1,
+      "length": 263,
+      "file_type": ".md",
+      "content_type": "example",
+      "has_code": false,
+      "has_numbers": true,
+      "language_detected": "natural",
+      "preview": ". For additional support, please refer to the official documentation or contact the development team. ### Contact Information - Email: support@example..."
+    }
+  ]
+}
