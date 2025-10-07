@@ -21,84 +21,16 @@ const DocumentUpload = ({ language }) => {
       setDocuments(res?.data || [])
     } catch (e) {
       console.error(e)
+      if (e.message && e.message.includes('Not authorized')) {
+        toast.error('Please login to view your documents')
+      }
     } finally {
       setDocsLoading(false)
     }
   }, [])
 
-  useEffect(() => {
-    fetchDocuments()
-  }, [fetchDocuments])
-  
-  const handleDrag = useCallback((e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true)
-    } else if (e.type === 'dragleave') {
-      setDragActive(false)
-    }
-  }, [])
-  
-  const handleDrop = useCallback((e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragActive(false)
-    
-    const files = e.dataTransfer.files
-    if (files && files[0]) {
-      handleFileUpload(files[0])
-    }
-  }, [handleFileUpload])
-  
-  const handleFileInput = (e) => {
-    const file = e.target.files[0]
-    if (file) {
-      handleFileUpload(file)
-    }
-  }
-  
-  const handleFileUpload = useCallback(async (file) => {
-    if (!file.type.includes('pdf')) {
-      toast.error('Please upload a PDF file')
-      return
-    }
-    
-    if (file.size > 10 * 1024 * 1024) { // 10MB limit
-      toast.error('File size should be less than 10MB')
-      return
-    }
-    
-    setLoading(true)
-    setUploadedFile(file)
-    try {
-      const formData = new FormData()
-      formData.append('document', file)
-      formData.append('documentType', 'form16')
-      formData.append('financialYear', 'FY2024-25')
-
-      const res = await apiClient.uploadDocument(formData)
-      toast.success(t.uploadSuccess)
-
-      // Optionally kick off processing
-      if (res?.data?._id) {
-        await apiClient.processDocument(res.data._id)
-      }
-
-      // For UI demo, keep extractedData via mock until backend processing callback is implemented
-      const text = await extractTextFromPDF()
-      const data = extractForm16Data(text)
-      setExtractedData(data)
-    } catch (error) {
-      toast.error(t.uploadError)
-      console.error(error)
-    } finally {
-      setLoading(false)
-    }
-  }, [t.uploadSuccess, t.uploadError])
-  
   // Mock PDF text extraction (in real app, use pdf-lib or similar)
-  const extractTextFromPDF = () => {
+  const extractTextFromPDF = useCallback(() => {
     return new Promise((resolve) => {
       setTimeout(() => {
         // Mock extracted text from a sample Form 16
@@ -140,6 +72,78 @@ const DocumentUpload = ({ language }) => {
         resolve(mockText)
       }, 2000)
     })
+  }, [])
+
+  const handleFileUpload = useCallback(async (file) => {
+    if (!file.type.includes('pdf')) {
+      toast.error('Please upload a PDF file')
+      return
+    }
+    
+    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+      toast.error('File size should be less than 10MB')
+      return
+    }
+    
+    setLoading(true)
+    setUploadedFile(file)
+    try {
+      const formData = new FormData()
+      formData.append('document', file)
+      formData.append('documentType', 'form16')
+      formData.append('financialYear', 'FY2024-25')
+
+      const res = await apiClient.uploadDocument(formData)
+      toast.success(t.uploadSuccess)
+
+      // Optionally kick off processing
+      if (res?.data?._id) {
+        await apiClient.processDocument(res.data._id)
+      }
+
+      // For UI demo, keep extractedData via mock until backend processing callback is implemented
+      const text = await extractTextFromPDF()
+      const data = extractForm16Data(text)
+      setExtractedData(data)
+      fetchDocuments() // Refresh documents list
+    } catch (error) {
+      toast.error(t.uploadError || 'Upload failed. Please try again.')
+      console.error('Upload error:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [t.uploadSuccess, t.uploadError, extractTextFromPDF, fetchDocuments])
+
+  useEffect(() => {
+    fetchDocuments()
+  }, [fetchDocuments])
+  
+  const handleDrag = useCallback((e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true)
+    } else if (e.type === 'dragleave') {
+      setDragActive(false)
+    }
+  }, [])
+  
+  const handleDrop = useCallback((e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
+    
+    const files = e.dataTransfer.files
+    if (files && files[0]) {
+      handleFileUpload(files[0])
+    }
+  }, [handleFileUpload])
+  
+  const handleFileInput = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      handleFileUpload(file)
+    }
   }
   
   const handleEditData = (field, value) => {
@@ -162,7 +166,8 @@ const DocumentUpload = ({ language }) => {
       await apiClient.processDocument(id)
       toast.success('Processing started')
       fetchDocuments()
-    } catch (e) {
+    } catch (error) {
+      console.error('Process error:', error)
       toast.error('Failed to start processing')
     }
   }
@@ -172,7 +177,8 @@ const DocumentUpload = ({ language }) => {
       await apiClient.request(`/documents/${id}`, { method: 'DELETE' })
       toast.success('Document deleted')
       fetchDocuments()
-    } catch (e) {
+    } catch (error) {
+      console.error('Delete error:', error)
       toast.error('Failed to delete document')
     }
   }
