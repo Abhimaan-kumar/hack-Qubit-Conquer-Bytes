@@ -47,7 +47,21 @@ class ApiClient {
         credentials: 'include', // Include cookies for authentication
       });
 
-      const data = await response.json();
+      // Check if response has content before parsing JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+      }
+
+      const text = await response.text();
+      let data;
+      
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch (parseError) {
+        console.error('Failed to parse JSON:', text);
+        throw new Error('Invalid response from server');
+      }
 
       if (!response.ok) {
         throw new Error(data.message || `HTTP error! status: ${response.status}`);
