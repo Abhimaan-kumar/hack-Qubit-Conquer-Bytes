@@ -1,0 +1,104 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Local Chatbot Client</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; padding: 0; background: #0b1020; color: #e6e6e6; }
+      .container { max-width: 900px; margin: 0 auto; padding: 24px; }
+      .messages { background: #121733; border: 1px solid #273057; border-radius: 12px; padding: 16px; height: 60vh; overflow: auto; }
+      .row { margin: 8px 0; }
+      .user { color: #9ad1ff; }
+      .bot { color: #b0f2c2; white-space: pre-wrap; }
+      .controls { display: flex; gap: 8px; margin-top: 12px; }
+      input[type="text"] { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #273057; background: #0f1530; color: #e6e6e6; }
+      button { padding: 12px 16px; border-radius: 8px; border: 1px solid #273057; background: #19214a; color: #e6e6e6; cursor: pointer; }
+      button:disabled { opacity: 0.5; cursor: not-allowed; }
+      .status { font-size: 12px; color: #8aa0cf; margin-top: 6px; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>Local Chatbot Client</h2>
+      <div class="status" id="status">Disconnected</div>
+      <div class="messages" id="messages"></div>
+      <div class="controls">
+        <input id="input" type="text" placeholder="Type your message..." />
+        <button id="send">Send</button>
+      </div>
+    </div>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script>
+      const statusEl = document.getElementById('status');
+      const messagesEl = document.getElementById('messages');
+      const inputEl = document.getElementById('input');
+      const sendBtn = document.getElementById('send');
+
+      const SERVER = location.hostname.includes('localhost') ? 'http://127.0.0.1:3001' : 'http://127.0.0.1:3001';
+      const socket = io(SERVER, { transports: ['websocket'] });
+
+      let tempBotBuffer = '';
+
+      function addRow(text, cls) {
+        const row = document.createElement('div');
+        row.className = 'row ' + cls;
+        row.textContent = text;
+        messagesEl.appendChild(row);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+        return row;
+      }
+
+      socket.on('connect', () => {
+        statusEl.textContent = 'Connected to ' + SERVER;
+      });
+
+      socket.on('disconnect', () => {
+        statusEl.textContent = 'Disconnected';
+        sendBtn.disabled = false;
+      });
+
+      socket.on('bot_token', ({ token }) => {
+        tempBotBuffer += token || '';
+        if (!messagesEl.lastBotRow) {
+          messagesEl.lastBotRow = addRow('', 'bot');
+        }
+        messagesEl.lastBotRow.textContent = tempBotBuffer;
+      });
+
+      socket.on('bot_end', ({ text }) => {
+        tempBotBuffer = '';
+        messagesEl.lastBotRow = null;
+        addRow(text || '', 'bot');
+        sendBtn.disabled = false;
+      });
+
+      socket.on('bot_error', ({ error }) => {
+        addRow('Error: ' + (error || 'Unknown error'), 'bot');
+        tempBotBuffer = '';
+        messagesEl.lastBotRow = null;
+        sendBtn.disabled = false;
+      });
+
+      sendBtn.addEventListener('click', () => {
+        const text = inputEl.value.trim();
+        if (!text) return;
+        addRow(text, 'user');
+        messagesEl.lastBotRow = null;
+        tempBotBuffer = '';
+        sendBtn.disabled = true;
+        socket.emit('user_message', { text });
+        inputEl.value = '';
+        inputEl.focus();
+      });
+
+      inputEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          sendBtn.click();
+        }
+      });
+    </script>
+  </body>
+  </html>
+
+
