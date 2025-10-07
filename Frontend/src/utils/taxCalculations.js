@@ -67,30 +67,44 @@ export const calculateOldRegimeTax = (income, deductions) => {
   }
 }
 
-// Calculate tax for new regime
-export const calculateNewRegimeTax = (income) => {
-  const taxableIncome = Math.max(0, income - STANDARD_DEDUCTION)
+// Calculate tax for new regime (with Section 87A rebate)
+export const calculateNewRegimeTax = (income, otherDeductions = 0) => {
+  const taxableIncome = Math.max(0, income - STANDARD_DEDUCTION - otherDeductions)
   
   const result = calculateTaxBySlabs(taxableIncome, newRegimeSlabs)
   
   // Add health and education cess (4%)
   const cess = Math.round(result.tax * 0.04)
-  const totalTax = result.tax + cess
+  const totalTaxBeforeRebate = result.tax + cess
+  
+  // Section 87A Rebate (Full rebate if taxable income <= 700000)
+  let rebate87A = 0
+  let qualifiesForRebate = false
+  if (taxableIncome <= 700000 && totalTaxBeforeRebate > 0) {
+    rebate87A = Math.min(totalTaxBeforeRebate, 25000) // Full rebate up to 25,000
+    qualifiesForRebate = true
+  }
+  
+  // Final tax after rebate
+  const finalTax = Math.max(0, totalTaxBeforeRebate - rebate87A)
   
   return {
     taxableIncome,
     tax: result.tax,
     cess,
-    totalTax,
+    totalTaxBeforeRebate,
+    rebate87A,
+    qualifiesForRebate,
+    totalTax: finalTax,
     breakdown: result.breakdown,
-    deductionsUsed: 0
+    deductionsUsed: otherDeductions
   }
 }
 
 // Compare both regimes and return recommendation
 export const compareTaxRegimes = (income, deductions) => {
   const oldRegime = calculateOldRegimeTax(income, deductions)
-  const newRegime = calculateNewRegimeTax(income)
+  const newRegime = calculateNewRegimeTax(income, 0) // New regime doesn't allow most deductions
   
   const savings = oldRegime.totalTax - newRegime.totalTax
   const recommended = savings > 0 ? 'new' : 'old'
@@ -100,7 +114,8 @@ export const compareTaxRegimes = (income, deductions) => {
     newRegime,
     savings: Math.abs(savings),
     recommended,
-    savingsPercentage: oldRegime.totalTax > 0 ? Math.round((Math.abs(savings) / oldRegime.totalTax) * 100) : 0
+    savingsPercentage: oldRegime.totalTax > 0 ? Math.round((Math.abs(savings) / oldRegime.totalTax) * 100) : 0,
+    rebateMessage: newRegime.qualifiesForRebate ? `🎉 New Regime: You qualify for Section 87A rebate! Tax reduced from ₹${newRegime.totalTaxBeforeRebate.toLocaleString()} to ₹${newRegime.totalTax.toLocaleString()}` : null
   }
 }
 

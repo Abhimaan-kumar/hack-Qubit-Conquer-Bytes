@@ -69,43 +69,101 @@ const TaxCalculator = ({ language }) => {
         otherDeductions: data.otherDeductions,
       }
       
-      // Prefer backend compare when authed; fallback to local
-      if (apiClient.token) {
-        const payload = {
-          income: { salary: data.grossSalary, houseProperty: 0, business: 0, capitalGains: 0, otherSources: 0 },
-          deductions: { section80c: deductions.section80C, section80d: deductions.section80D, section24b: data.homeLoanInterest, hra: 0, lta: 0, standardDeduction: 50000, other: deductions.otherDeductions },
-          taxPaid: { tds: 0, advanceTax: 0, selfAssessment: 0 },
-          financialYear: 'FY2024-25'
-        }
-        const res = await apiClient.compareTaxRegimes(payload)
-        const r = res?.data
-        if (r) {
+      // Prepare payload for API calls
+      const payload = {
+        income: {
+          salary: data.grossSalary,
+          houseProperty: 0,
+          business: 0,
+          capitalGains: 0,
+          otherSources: 0
+        },
+        deductions: {
+          section80c: data.section80C,
+          section80d: data.section80D,
+          section24b: data.homeLoanInterest,
+          hra: 0,
+          lta: 0,
+          standardDeduction: 50000,
+          other: data.otherDeductions
+        },
+        taxPaid: {
+          tds: 0,
+          advanceTax: 0,
+          selfAssessment: 0
+        },
+        financialYear: 'FY2024-25'
+      }
+
+      // Try enhanced API first
+      try {
+        const enhancedRes = await apiClient.compareEnhancedRegimes(payload)
+        if (enhancedRes?.success && enhancedRes?.data) {
+          const r = enhancedRes.data
           setResults({
             recommended: r.recommendedRegime,
             savings: r.savings,
-            savingsPercentage: r.oldRegime.taxableIncome > 0 ? ((r.oldRegime.totalTax - r.newRegime.totalTax) / (r.oldRegime.totalTax || 1) * 100).toFixed(2) : 0,
+            savingsPercentage: ((r.savings / Math.max(r.oldRegime.totalTax, r.newRegime.totalTax)) * 100).toFixed(2),
+            rebateMessage: r.rebateMessage,
             oldRegime: {
               taxableIncome: r.oldRegime.taxableIncome,
-              tax: r.oldRegime.totalTax - (r.oldRegime.totalTax * 0.04),
-              cess: r.oldRegime.totalTax * 0.04,
+              tax: r.oldRegime.tax,
+              cess: r.oldRegime.cess,
               totalTax: r.oldRegime.totalTax
             },
             newRegime: {
               taxableIncome: r.newRegime.taxableIncome,
-              tax: r.newRegime.totalTax - (r.newRegime.totalTax * 0.04),
-              cess: r.newRegime.totalTax * 0.04,
-              totalTax: r.newRegime.totalTax
+              tax: r.newRegime.tax,
+              cess: r.newRegime.cess,
+              totalTax: r.newRegime.totalTax,
+              totalTaxBeforeRebate: r.newRegime.totalTaxBeforeRebate,
+              rebate87A: r.newRegime.rebate87A,
+              qualifiesForRebate: r.newRegime.qualifiesForRebate
             }
           })
-        } else {
-          const comparison = compareTaxRegimes(data.grossSalary, deductions)
-          setResults(comparison)
+          toast.success('Tax calculation completed with enhanced engine!')
+          return
         }
-      } else {
-        const comparison = compareTaxRegimes(data.grossSalary, deductions)
-        setResults(comparison)
+      } catch (enhancedError) {
+        console.warn('Enhanced API failed, trying fallback:', enhancedError)
       }
-      toast.success('Tax calculation completed!')
+
+      // Fallback to existing API if authenticated
+      if (apiClient.token) {
+        try {
+          const res = await apiClient.compareTaxRegimes(payload)
+          const r = res?.data
+          if (r) {
+            setResults({
+              recommended: r.recommendedRegime,
+              savings: r.savings,
+              savingsPercentage: r.oldRegime.taxableIncome > 0 ? ((r.oldRegime.totalTax - r.newRegime.totalTax) / (r.oldRegime.totalTax || 1) * 100).toFixed(2) : 0,
+              oldRegime: {
+                taxableIncome: r.oldRegime.taxableIncome,
+                tax: r.oldRegime.totalTax - (r.oldRegime.totalTax * 0.04),
+                cess: r.oldRegime.totalTax * 0.04,
+                totalTax: r.oldRegime.totalTax
+              },
+              newRegime: {
+                taxableIncome: r.newRegime.taxableIncome,
+                tax: r.newRegime.totalTax - (r.newRegime.totalTax * 0.04),
+                cess: r.newRegime.totalTax * 0.04,
+                totalTax: r.newRegime.totalTax
+              }
+            })
+            toast.success('Tax calculation completed!')
+            return
+          }
+        } catch (apiError) {
+          console.warn('API calculation failed, using local:', apiError)
+        }
+      }
+
+      // Final fallback to local calculation
+      const comparison = compareTaxRegimes(data.grossSalary, deductions)
+      setResults(comparison)
+      toast.success('Tax calculation completed locally!')
+      
     } catch (error) {
       toast.error('Error calculating tax')
       console.error(error)
@@ -345,9 +403,15 @@ const TaxCalculator = ({ language }) => {
                 <p className="text-2xl font-bold mb-2">
                   {results.recommended === 'new' ? t.newRegime : t.oldRegime}
                 </p>
-                <p className="text-gray-600">
+                <p className="text-gray-600 mb-2">
                   You save {formatCurrency(results.savings)} ({results.savingsPercentage}%)
                 </p>
+                {/* Show rebate message if applicable */}
+                {results.rebateMessage && (
+                  <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded text-sm text-green-700">
+                    {results.rebateMessage}
+                  </div>
+                )}
               </div>
               
               {/* Comparison Cards */}
@@ -399,12 +463,39 @@ const TaxCalculator = ({ language }) => {
                       <span className="text-gray-600">Cess (4%):</span>
                       <span className="font-semibold">{formatCurrency(results.newRegime.cess)}</span>
                     </div>
+                    {results.newRegime.totalTaxBeforeRebate > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Tax Before Rebate:</span>
+                        <span className="font-semibold">{formatCurrency(results.newRegime.totalTaxBeforeRebate)}</span>
+                      </div>
+                    )}
+                    {results.newRegime.rebate87A > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Section 87A Rebate:</span>
+                        <span className="font-semibold text-green-600">-{formatCurrency(results.newRegime.rebate87A)}</span>
+                      </div>
+                    )}
                     <div className="border-t pt-2">
                       <div className="flex justify-between text-lg">
-                        <span className="font-semibold">Total Tax:</span>
+                        <span className="font-semibold">Final Tax:</span>
                         <span className="font-bold text-green-600">{formatCurrency(results.newRegime.totalTax)}</span>
                       </div>
                     </div>
+                    
+                    {/* Rebate Qualification Message */}
+                    {results.newRegime.qualifiesForRebate && (
+                      <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xl">🎉</span>
+                          <div>
+                            <p className="text-sm font-semibold text-green-800">Section 87A Rebate Applied!</p>
+                            <p className="text-xs text-green-700">
+                              Full rebate available since taxable income ≤ ₹7,00,000
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

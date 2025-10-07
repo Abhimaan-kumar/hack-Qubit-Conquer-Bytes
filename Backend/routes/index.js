@@ -3,6 +3,7 @@ import auth from './auth.js';
 import taxCalculations from './taxCalculations.js';
 import documents from './documents.js';
 import ai from './ai.js';
+import enhancedTax from './enhancedTax.js';
 
 const router = express.Router();
 
@@ -11,6 +12,7 @@ router.use('/auth', auth);
 router.use('/tax-calculations', taxCalculations);
 router.use('/documents', documents);
 router.use('/ai', ai);
+router.use('/enhanced-tax', enhancedTax);
 
 // Health check route
 router.get('/health', (req, res) => {

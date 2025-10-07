@@ -129,6 +129,35 @@ class ApiClient {
     return this.request('/tax-calculations/stats/summary');
   }
 
+  // Enhanced Tax Calculation APIs
+  async calculateEnhancedTax(taxData) {
+    return this.request('/enhanced-tax/calculate', {
+      method: 'POST',
+      body: JSON.stringify(taxData),
+    });
+  }
+
+  async compareEnhancedRegimes(taxData) {
+    return this.request('/enhanced-tax/compare-regimes', {
+      method: 'POST',
+      body: JSON.stringify(taxData),
+    });
+  }
+
+  async calculateFromForm16(form16Data) {
+    return this.request('/enhanced-tax/from-form16', {
+      method: 'POST',
+      body: JSON.stringify(form16Data),
+    });
+  }
+
+  async getTaxSuggestions(taxData) {
+    return this.request('/enhanced-tax/suggestions', {
+      method: 'POST',
+      body: JSON.stringify(taxData),
+    });
+  }
+
   // Document APIs
   async uploadDocument(formData) {
     const url = `${this.baseURL}/documents/upload`;
@@ -224,6 +253,10 @@ export const {
   getTaxCalculations,
   compareTaxRegimes,
   getTaxStats,
+  calculateEnhancedTax,
+  compareEnhancedRegimes,
+  calculateFromForm16,
+  getTaxSuggestions,
   uploadDocument,
   processDocument,
   getDocuments,

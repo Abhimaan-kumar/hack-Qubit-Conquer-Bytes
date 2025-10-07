@@ -324,12 +324,29 @@ taxCalculationSchema.methods.calculateTaxAmount = function(taxableIncome, regime
   // Calculate cess (4% on total tax + surcharge)
   const cess = (totalTax + surcharge) * 0.04;
 
+  // Calculate total tax before rebate
+  const totalTaxBeforeRebate = totalTax + surcharge + cess;
+  
+  // Section 87A Rebate (only for new regime)
+  let rebate87A = 0;
+  let qualifiesForRebate = false;
+  if (regime === 'new' && taxableIncome <= 700000 && totalTaxBeforeRebate > 0) {
+    rebate87A = Math.min(totalTaxBeforeRebate, 25000); // Full rebate up to 25,000
+    qualifiesForRebate = true;
+  }
+
+  // Final tax liability after rebate
+  const finalTaxLiability = Math.max(0, totalTaxBeforeRebate - rebate87A);
+
   return {
     slabs: taxSlabs,
     totalTax,
     surcharge,
     cess,
-    totalTaxLiability: totalTax + surcharge + cess
+    totalTaxBeforeRebate,
+    rebate87A,
+    qualifiesForRebate,
+    totalTaxLiability: finalTaxLiability
   };
 };
 
@@ -347,9 +364,9 @@ taxCalculationSchema.methods.getOldRegimeSlabs = function() {
 taxCalculationSchema.methods.getNewRegimeSlabs = function() {
   return [
     { min: 0, max: 300000, rate: 0 },
-    { min: 300000, max: 700000, rate: 5 },
-    { min: 700000, max: 1000000, rate: 10 },
-    { min: 1000000, max: 1200000, rate: 15 },
+    { min: 300000, max: 600000, rate: 5 },
+    { min: 600000, max: 900000, rate: 10 },
+    { min: 900000, max: 1200000, rate: 15 },
     { min: 1200000, max: 1500000, rate: 20 },
     { min: 1500000, max: Infinity, rate: 30 }
   ];
