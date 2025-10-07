@@ -32,27 +32,29 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Rate limiting
+// Rate limiting (relaxed for development)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 10000, // limit each IP to 10000 requests per windowMs (very high for development)
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again later.'
   },
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === 'development' // Skip in development
 });
 app.use('/api/', limiter);
 
-// Stricter rate limiting for auth routes
+// Stricter rate limiting for auth routes (relaxed for development)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50, // limit each IP to 50 auth requests per windowMs (increased for development)
+  max: 1000, // limit each IP to 1000 auth requests per windowMs (very high for development)
   message: {
     success: false,
     message: 'Too many authentication attempts, please try again later.'
-  }
+  },
+  skip: () => process.env.NODE_ENV === 'development' // Skip in development
 });
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
