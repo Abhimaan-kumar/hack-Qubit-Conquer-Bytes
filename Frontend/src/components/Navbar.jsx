@@ -1,9 +1,10 @@
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Calculator, Upload, MessageCircle, BarChart3, BookOpen, Globe } from 'lucide-react'
+import { Calculator, Upload, MessageCircle, BarChart3, BookOpen } from 'lucide-react'
 import { translations } from '../data/translations'
 import apiClient from '../utils/api'
 import { Link as RouterLink } from 'react-router-dom'
+import LanguageSwitcher from './LanguageSwitcher'
 
 const Navbar = ({ language, setLanguage }) => {
   const location = useLocation()
@@ -16,14 +17,6 @@ const Navbar = ({ language, setLanguage }) => {
     { path: '/assistant', icon: MessageCircle, label: t.nav.assistant },
     { path: '/comparison', icon: BarChart3, label: t.nav.comparison },
     { path: '/deductions', icon: BookOpen, label: t.nav.deductions },
-  ]
-
-  const languages = [
-    { code: 'en', name: 'English' },
-    { code: 'hi', name: 'हिंदी' },
-    { code: 'mr', name: 'मराठी' },
-    { code: 'ta', name: 'தமிழ்' },
-    { code: 'te', name: 'తెలుగు' },
   ]
 
   return (
@@ -64,29 +57,16 @@ const Navbar = ({ language, setLanguage }) => {
                   onClick={async () => { await apiClient.logout(); apiClient.setAuthToken(null); window.location.href = '/'; }}
                   className="px-3 py-2 bg-gray-100 rounded-md text-sm hover:bg-gray-200"
                 >
-                  Logout
+                  {t.logout}
                 </button>
               </>
             ) : (
               <div className="hidden md:flex space-x-2">
-                <RouterLink to="/login" className="px-3 py-2 rounded-md text-sm text-gray-600 hover:bg-gray-100">Login</RouterLink>
-                <RouterLink to="/register" className="px-3 py-2 rounded-md text-sm bg-blue-600 text-white hover:bg-blue-700">Register</RouterLink>
+                <RouterLink to="/login" className="px-3 py-2 rounded-md text-sm text-gray-600 hover:bg-gray-100">{t.login}</RouterLink>
+                <RouterLink to="/register" className="px-3 py-2 rounded-md text-sm bg-blue-600 text-white hover:bg-blue-700">{t.register}</RouterLink>
               </div>
             )}
-            <div className="relative">
-              <select
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-                className="appearance-none bg-white border border-gray-300 rounded-md py-2 pl-3 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              >
-                {languages.map((lang) => (
-                  <option key={lang.code} value={lang.code}>
-                    {lang.name}
-                  </option>
-                ))}
-              </select>
-              <Globe className="absolute right-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-            </div>
+            <LanguageSwitcher language={language} setLanguage={setLanguage} />
           </div>
         </div>
       </div>

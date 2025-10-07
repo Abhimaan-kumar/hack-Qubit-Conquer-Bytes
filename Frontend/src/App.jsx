@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import Navbar from './components/Navbar'
@@ -11,9 +11,21 @@ import DocumentUpload from './pages/DocumentUpload'
 import ChatAssistant from './pages/ChatAssistant'
 import TaxComparison from './pages/TaxComparison'
 import DeductionGuide from './pages/DeductionGuide'
+import FloatingHelpButton from './components/FloatingHelpButton'
 
 function App() {
-  const [language, setLanguage] = useState('en')
+  // Load saved language preference or default to 'en'
+  const [language, setLanguage] = useState(() => {
+    const savedLanguage = localStorage.getItem('preferredLanguage')
+    return savedLanguage || 'en'
+  })
+
+  // Save language preference whenever it changes
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', language)
+    // Set document lang attribute for accessibility
+    document.documentElement.lang = language
+  }, [language])
 
   return (
     <Router>
@@ -27,10 +39,11 @@ function App() {
             <Route path="/assistant" element={<RequireAuth><ChatAssistant language={language} /></RequireAuth>} />
             <Route path="/comparison" element={<TaxComparison language={language} />} />
             <Route path="/deductions" element={<DeductionGuide language={language} />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            <Route path="/login" element={<Login language={language} />} />
+            <Route path="/register" element={<Register language={language} />} />
           </Routes>
         </main>
+        <FloatingHelpButton language={language} />
         <Toaster position="top-right" />
       </div>
     </Router>

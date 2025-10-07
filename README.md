@@ -21,6 +21,7 @@ open http://localhost:5174
 - **[INTEGRATION_SUMMARY.md](INTEGRATION_SUMMARY.md)** - Complete integration overview
 - **[RAG_INTEGRATION_GUIDE.md](RAG_INTEGRATION_GUIDE.md)** - Detailed setup and API docs
 - **[ARCHITECTURE_DIAGRAM.md](ARCHITECTURE_DIAGRAM.md)** - Visual system architecture
+- **[Frontend/MULTILINGUAL_GUIDE.md](Frontend/MULTILINGUAL_GUIDE.md)** - Multi-language support documentation
 
 ### ✨ Features
 
@@ -29,7 +30,10 @@ open http://localhost:5174
 - ✅ **Tax Calculator** - Calculate taxes under different regimes
 - ✅ **Document Upload** - Upload and process tax documents
 - ✅ **AI Assistant** - Get answers to tax-related queries
-- ✅ **Multi-Language Support** - English and Hindi
+- ✅ **Multi-Language Support** - 5 languages: English, Hindi, Marathi, Tamil, Telugu
+  - Beautiful language switcher with flags
+  - Automatic browser language detection
+  - Persistent language preferences
 
 ### 🏗️ Architecture
 
