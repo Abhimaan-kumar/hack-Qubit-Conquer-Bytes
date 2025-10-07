@@ -6,6 +6,7 @@ import { z } from 'zod'
 import toast from 'react-hot-toast'
 import { translations } from '../data/translations'
 import { compareTaxRegimes, formatCurrency, validatePAN } from '../utils/taxCalculations'
+import apiClient from '../utils/api'
 
 const taxFormSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -53,8 +54,42 @@ const TaxCalculator = ({ language }) => {
         otherDeductions: data.otherDeductions,
       }
       
-      const comparison = compareTaxRegimes(data.grossSalary, deductions)
-      setResults(comparison)
+      // Prefer backend compare when authed; fallback to local
+      if (apiClient.token) {
+        const payload = {
+          income: { salary: data.grossSalary, houseProperty: 0, business: 0, capitalGains: 0, otherSources: 0 },
+          deductions: { section80c: deductions.section80C, section80d: deductions.section80D, section24b: data.homeLoanInterest, hra: 0, lta: 0, standardDeduction: 50000, other: deductions.otherDeductions },
+          taxPaid: { tds: 0, advanceTax: 0, selfAssessment: 0 },
+          financialYear: 'FY2024-25'
+        }
+        const res = await apiClient.compareTaxRegimes(payload)
+        const r = res?.data
+        if (r) {
+          setResults({
+            recommended: r.recommendedRegime,
+            savings: r.savings,
+            savingsPercentage: r.oldRegime.taxableIncome > 0 ? ((r.oldRegime.totalTax - r.newRegime.totalTax) / (r.oldRegime.totalTax || 1) * 100).toFixed(2) : 0,
+            oldRegime: {
+              taxableIncome: r.oldRegime.taxableIncome,
+              tax: r.oldRegime.totalTax - (r.oldRegime.totalTax * 0.04),
+              cess: r.oldRegime.totalTax * 0.04,
+              totalTax: r.oldRegime.totalTax
+            },
+            newRegime: {
+              taxableIncome: r.newRegime.taxableIncome,
+              tax: r.newRegime.totalTax - (r.newRegime.totalTax * 0.04),
+              cess: r.newRegime.totalTax * 0.04,
+              totalTax: r.newRegime.totalTax
+            }
+          })
+        } else {
+          const comparison = compareTaxRegimes(data.grossSalary, deductions)
+          setResults(comparison)
+        }
+      } else {
+        const comparison = compareTaxRegimes(data.grossSalary, deductions)
+        setResults(comparison)
+      }
       toast.success('Tax calculation completed!')
     } catch (error) {
       toast.error('Error calculating tax')

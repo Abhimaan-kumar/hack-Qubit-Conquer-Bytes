@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast'
 import Navbar from './components/Navbar'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import RequireAuth from './components/RequireAuth'
 import Home from './pages/Home'
 import TaxCalculator from './pages/TaxCalculator'
 import DocumentUpload from './pages/DocumentUpload'
@@ -22,8 +23,8 @@ function App() {
           <Routes>
             <Route path="/" element={<Home language={language} />} />
             <Route path="/calculator" element={<TaxCalculator language={language} />} />
-            <Route path="/upload" element={<DocumentUpload language={language} />} />
-            <Route path="/assistant" element={<ChatAssistant language={language} />} />
+            <Route path="/upload" element={<RequireAuth><DocumentUpload language={language} /></RequireAuth>} />
+            <Route path="/assistant" element={<RequireAuth><ChatAssistant language={language} /></RequireAuth>} />
             <Route path="/comparison" element={<TaxComparison language={language} />} />
             <Route path="/deductions" element={<DeductionGuide language={language} />} />
             <Route path="/login" element={<Login />} />

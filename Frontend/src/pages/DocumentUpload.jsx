@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react'
-import { Upload, FileText, CheckCircle, AlertCircle, Download, Calculator } from 'lucide-react'
+import React, { useState, useCallback, useEffect } from 'react'
+import { Upload, FileText, CheckCircle, AlertCircle, Download, Calculator, RefreshCcw, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { translations } from '../data/translations'
 import { extractForm16Data, formatCurrency } from '../utils/taxCalculations'
@@ -11,6 +11,24 @@ const DocumentUpload = ({ language }) => {
   const [extractedData, setExtractedData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [dragActive, setDragActive] = useState(false)
+  const [documents, setDocuments] = useState([])
+  const [docsLoading, setDocsLoading] = useState(false)
+
+  const fetchDocuments = useCallback(async () => {
+    setDocsLoading(true)
+    try {
+      const res = await apiClient.getDocuments()
+      setDocuments(res?.data || [])
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setDocsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchDocuments()
+  }, [fetchDocuments])
   
   const handleDrag = useCallback((e) => {
     e.preventDefault()
@@ -137,6 +155,26 @@ const DocumentUpload = ({ language }) => {
     setUploadedFile(null)
     setExtractedData(null)
     setLoading(false)
+  }
+
+  const handleProcess = async (id) => {
+    try {
+      await apiClient.processDocument(id)
+      toast.success('Processing started')
+      fetchDocuments()
+    } catch (e) {
+      toast.error('Failed to start processing')
+    }
+  }
+
+  const handleDelete = async (id) => {
+    try {
+      await apiClient.request(`/documents/${id}`, { method: 'DELETE' })
+      toast.success('Document deleted')
+      fetchDocuments()
+    } catch (e) {
+      toast.error('Failed to delete document')
+    }
   }
   
   return (
@@ -409,6 +447,54 @@ const DocumentUpload = ({ language }) => {
           )}
         </div>
       )}
+
+      {/* Documents List */}
+      <div className="mt-10 bg-white rounded-xl shadow-lg p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-gray-800">Your Documents</h2>
+          <button onClick={fetchDocuments} className="px-3 py-2 text-sm bg-gray-100 rounded-md hover:bg-gray-200 flex items-center">
+            <RefreshCcw className="h-4 w-4 mr-1" /> Refresh
+          </button>
+        </div>
+        {docsLoading ? (
+          <div className="text-gray-600">Loading...</div>
+        ) : documents.length === 0 ? (
+          <div className="text-gray-600">No documents uploaded yet.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="text-left text-gray-600">
+                  <th className="py-2 pr-4">File</th>
+                  <th className="py-2 pr-4">Type</th>
+                  <th className="py-2 pr-4">FY</th>
+                  <th className="py-2 pr-4">Status</th>
+                  <th className="py-2 pr-4">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {documents.map((doc) => (
+                  <tr key={doc._id} className="border-t">
+                    <td className="py-2 pr-4">{doc.originalName}</td>
+                    <td className="py-2 pr-4 capitalize">{doc.documentType}</td>
+                    <td className="py-2 pr-4">{doc.financialYear}</td>
+                    <td className="py-2 pr-4">
+                      <span className={`px-2 py-1 rounded text-xs ${doc.processingStatus === 'completed' ? 'bg-green-100 text-green-700' : doc.processingStatus === 'processing' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>
+                        {doc.processingStatus}
+                      </span>
+                    </td>
+                    <td className="py-2 pr-4 space-x-2">
+                      <button onClick={() => handleProcess(doc._id)} className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">Process</button>
+                      <a href={`${apiClient.baseURL}/documents/${doc._id}/download`} className="px-2 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200">Download</a>
+                      <button onClick={() => handleDelete(doc._id)} className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 flex items-center"><Trash2 className="h-3 w-3 mr-1" />Delete</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
