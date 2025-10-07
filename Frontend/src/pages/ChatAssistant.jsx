@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Mic, MicOff, User, Bot, FileText, Calculator, AlertCircle, CheckCircle, Info, HelpCircle, BookOpen, Settings, DollarSign, Briefcase, Home, Car, Heart, Loader2 } from 'lucide-react';
+import { Send, Mic, MicOff, User, Bot, FileText, Calculator, AlertCircle, CheckCircle, Info, HelpCircle, BookOpen, Settings, DollarSign, Briefcase, Home, Car, Heart, Loader2, Lightbulb } from 'lucide-react';
 import apiClient from '../utils/api';
 import { translations } from '../data/translations'
 
@@ -163,18 +163,29 @@ Feel free to ask more specific questions about income tax!`
     setInputMessage('')
     setIsTyping(true)
     
-    // Simulate typing delay
-    setTimeout(() => {
+    try {
+      // Call backend AI endpoint
+      const sessionId = 'default';
+      const response = await apiClient.sendAIQuery({ query: message, queryType: 'general', sessionId });
+      const { data } = response;
       const botResponse = {
         id: Date.now() + 1,
         type: 'bot',
-        content: generateBotResponse(message),
+        content: data?.response || generateBotResponse(message),
         timestamp: new Date()
       }
-      
       setMessages(prev => [...prev, botResponse])
+    } catch (err) {
+      const botResponse = {
+        id: Date.now() + 1,
+        type: 'bot',
+        content: 'Sorry, I could not process your request right now.',
+        timestamp: new Date()
+      }
+      setMessages(prev => [...prev, botResponse])
+    } finally {
       setIsTyping(false)
-    }, 1000 + Math.random() * 1000) // Random delay between 1-2 seconds
+    }
   }
   
   const handleKeyPress = (e) => {

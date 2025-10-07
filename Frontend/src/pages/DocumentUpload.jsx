@@ -1,8 +1,9 @@
 import React, { useState, useCallback } from 'react'
-import { Upload, FileText, CheckCircle, AlertCircle, Download } from 'lucide-react'
+import { Upload, FileText, CheckCircle, AlertCircle, Download, Calculator } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { translations } from '../data/translations'
 import { extractForm16Data, formatCurrency } from '../utils/taxCalculations'
+import apiClient from '../utils/api'
 
 const DocumentUpload = ({ language }) => {
   const t = translations[language]
@@ -52,13 +53,24 @@ const DocumentUpload = ({ language }) => {
     
     setLoading(true)
     setUploadedFile(file)
-    
     try {
-      // Simulate PDF text extraction (in real app, this would use a PDF parsing library)
+      const formData = new FormData()
+      formData.append('document', file)
+      formData.append('documentType', 'form16')
+      formData.append('financialYear', 'FY2024-25')
+
+      const res = await apiClient.uploadDocument(formData)
+      toast.success(t.uploadSuccess)
+
+      // Optionally kick off processing
+      if (res?.data?._id) {
+        await apiClient.processDocument(res.data._id)
+      }
+
+      // For UI demo, keep extractedData via mock until backend processing callback is implemented
       const text = await extractTextFromPDF()
       const data = extractForm16Data(text)
       setExtractedData(data)
-      toast.success(t.uploadSuccess)
     } catch (error) {
       toast.error(t.uploadError)
       console.error(error)

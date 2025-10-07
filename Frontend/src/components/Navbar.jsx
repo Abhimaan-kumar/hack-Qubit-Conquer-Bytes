@@ -2,6 +2,8 @@ import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Calculator, Upload, MessageCircle, BarChart3, BookOpen, Globe } from 'lucide-react'
 import { translations } from '../data/translations'
+import apiClient from '../utils/api'
+import { Link as RouterLink } from 'react-router-dom'
 
 const Navbar = ({ language, setLanguage }) => {
   const location = useLocation()
@@ -55,6 +57,22 @@ const Navbar = ({ language, setLanguage }) => {
           </div>
 
           <div className="flex items-center space-x-4">
+            {apiClient.token ? (
+              <>
+                <span className="text-sm text-gray-600 hidden sm:inline">Signed in</span>
+                <button
+                  onClick={async () => { await apiClient.logout(); apiClient.setAuthToken(null); window.location.href = '/'; }}
+                  className="px-3 py-2 bg-gray-100 rounded-md text-sm hover:bg-gray-200"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <div className="hidden md:flex space-x-2">
+                <RouterLink to="/login" className="px-3 py-2 rounded-md text-sm text-gray-600 hover:bg-gray-100">Login</RouterLink>
+                <RouterLink to="/register" className="px-3 py-2 rounded-md text-sm bg-blue-600 text-white hover:bg-blue-700">Register</RouterLink>
+              </div>
+            )}
             <div className="relative">
               <select
                 value={language}

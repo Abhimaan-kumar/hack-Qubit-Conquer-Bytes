@@ -2,6 +2,8 @@ import React, { useState } from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import Navbar from './components/Navbar'
+import Login from './pages/Login'
+import Register from './pages/Register'
 import Home from './pages/Home'
 import TaxCalculator from './pages/TaxCalculator'
 import DocumentUpload from './pages/DocumentUpload'
@@ -24,6 +26,8 @@ function App() {
             <Route path="/assistant" element={<ChatAssistant language={language} />} />
             <Route path="/comparison" element={<TaxComparison language={language} />} />
             <Route path="/deductions" element={<DeductionGuide language={language} />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
           </Routes>
         </main>
         <Toaster position="top-right" />

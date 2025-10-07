@@ -1,7 +1,14 @@
 // API Configuration and utilities
-const API_BASE_URL = window.location.hostname === 'localhost' 
-  ? 'http://localhost:5001/api' 
-  : `${window.location.protocol}//${window.location.hostname}:5001/api`;
+// Prefer Vite env if provided, else fall back to sensible defaults
+const ENV_BASE = (typeof import !== 'undefined' && typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL)
+  ? import.meta.env.VITE_API_BASE_URL
+  : null;
+
+const API_BASE_URL = ENV_BASE
+  ? ENV_BASE
+  : (window.location.hostname === 'localhost'
+      ? 'http://localhost:5001/api'
+      : `${window.location.protocol}//${window.location.hostname}:5001/api`);
 
 // API client with error handling
 class ApiClient {
