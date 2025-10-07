@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Mic, MicOff, User, Bot, FileText, Calculator, AlertCircle, CheckCircle, Info, HelpCircle, BookOpen, Settings, DollarSign, Briefcase, Home, Car, Heart, Loader2, Lightbulb } from 'lucide-react';
+import { Send, Mic, MicOff, User, Bot, FileText, Calculator, AlertCircle, CheckCircle, Info, HelpCircle, BookOpen, Settings, DollarSign, Briefcase, Home, Car, Heart, Loader2, Lightbulb, MessageCircle } from 'lucide-react';
 import apiClient from '../utils/api';
 import { translations } from '../data/translations'
 
@@ -164,22 +164,28 @@ Feel free to ask more specific questions about income tax!`
     setIsTyping(true)
     
     try {
-      // Call backend AI endpoint
-      const sessionId = 'default';
-      const response = await apiClient.sendAIQuery({ query: message, queryType: 'general_tax_info', sessionId });
-      const { data } = response;
+      // Call backend AI endpoint (fallback to local if backend fails)
+      const sessionId = 'session_' + Date.now();
+      const response = await apiClient.sendAIQuery({ 
+        query: message, 
+        queryType: 'general_tax_info', 
+        sessionId 
+      });
+      
       const botResponse = {
         id: Date.now() + 1,
         type: 'bot',
-        content: data?.response || generateBotResponse(message),
+        content: response?.data?.response || generateBotResponse(message),
         timestamp: new Date()
       }
       setMessages(prev => [...prev, botResponse])
     } catch (err) {
+      console.error('AI query error:', err)
+      // Use local response as fallback
       const botResponse = {
         id: Date.now() + 1,
         type: 'bot',
-        content: 'Sorry, I could not process your request right now.',
+        content: generateBotResponse(message),
         timestamp: new Date()
       }
       setMessages(prev => [...prev, botResponse])
