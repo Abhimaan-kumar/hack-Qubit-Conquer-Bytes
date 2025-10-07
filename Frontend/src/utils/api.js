@@ -44,6 +44,7 @@ class ApiClient {
       const response = await fetch(url, {
         ...options,
         headers,
+        credentials: 'include', // Include cookies for authentication
       });
 
       const data = await response.json();

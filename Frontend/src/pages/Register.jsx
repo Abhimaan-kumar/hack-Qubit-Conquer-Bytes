@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { UserPlus } from 'lucide-react'
 import toast from 'react-hot-toast'
 import apiClient from '../utils/api'
@@ -11,19 +12,36 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    
+    // Validate password
+    if (password.length < 6) {
+      toast.error('Password must be at least 6 characters long')
+      return
+    }
+    
     setLoading(true)
     try {
-      const res = await apiClient.register({ name, email, password })
-      const token = res?.token
-      if (token) {
-        apiClient.setAuthToken(token)
-        toast.success('Account created')
-        window.location.href = '/'
+      const response = await apiClient.register({ name, email, password })
+      
+      if (response.success && response.token) {
+        apiClient.setAuthToken(response.token)
+        toast.success('Account created successfully!')
+        
+        // Store user data if needed
+        if (response.data && response.data.user) {
+          localStorage.setItem('user', JSON.stringify(response.data.user))
+        }
+        
+        // Redirect to home page
+        setTimeout(() => {
+          window.location.href = '/'
+        }, 500)
       } else {
-        throw new Error('No token received')
+        throw new Error(response.message || 'Registration failed')
       }
     } catch (err) {
-      toast.error(err.message || 'Registration failed')
+      console.error('Registration error:', err)
+      toast.error(err.message || 'Registration failed. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -53,6 +71,14 @@ const Register = () => {
             {loading ? 'Creating account...' : 'Register'}
           </button>
         </form>
+        <div className="mt-4 text-center">
+          <p className="text-sm text-gray-600">
+            Already have an account?{' '}
+            <Link to="/login" className="text-blue-600 hover:text-blue-700 font-semibold">
+              Login here
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   )

@@ -26,10 +26,10 @@ app.use(helmet({
 const defaultOrigins = ['http://localhost:3000', 'http://localhost:5174'];
 const allowedOrigins = [process.env.FRONTEND_URL, ...defaultOrigins].filter(Boolean);
 app.use(cors({
-  origin: (origin, cb) => !origin || allowedOrigins.includes(origin) ? cb(null, true) : cb(new Error('Not allowed by CORS')),
+  origin: process.env.FRONTEND_URL || 'http://localhost:5174',
   credentials: true,
-  methods: ['GET','POST','PUT','DELETE','OPTIONS'],
-  allowedHeaders: ['Content-Type','Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Rate limiting
@@ -48,7 +48,7 @@ app.use('/api/', limiter);
 // Stricter rate limiting for auth routes
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 auth requests per windowMs
+  max: 50, // limit each IP to 50 auth requests per windowMs (increased for development)
   message: {
     success: false,
     message: 'Too many authentication attempts, please try again later.'

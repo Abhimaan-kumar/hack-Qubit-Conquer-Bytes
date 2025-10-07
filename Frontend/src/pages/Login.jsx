@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { LogIn } from 'lucide-react'
 import toast from 'react-hot-toast'
 import apiClient from '../utils/api'
@@ -12,17 +13,27 @@ const Login = () => {
     e.preventDefault()
     setLoading(true)
     try {
-      const res = await apiClient.login({ email, password })
-      const token = res?.token
-      if (token) {
-        apiClient.setAuthToken(token)
-        toast.success('Logged in successfully')
-        window.location.href = '/'
+      const response = await apiClient.login({ email, password })
+      
+      if (response.success && response.token) {
+        apiClient.setAuthToken(response.token)
+        toast.success('Logged in successfully!')
+        
+        // Store user data if needed
+        if (response.data && response.data.user) {
+          localStorage.setItem('user', JSON.stringify(response.data.user))
+        }
+        
+        // Redirect to home page
+        setTimeout(() => {
+          window.location.href = '/'
+        }, 500)
       } else {
-        throw new Error('No token received')
+        throw new Error(response.message || 'Login failed')
       }
     } catch (err) {
-      toast.error(err.message || 'Login failed')
+      console.error('Login error:', err)
+      toast.error(err.message || 'Login failed. Please check your credentials.')
     } finally {
       setLoading(false)
     }
@@ -48,6 +59,14 @@ const Login = () => {
             {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
+        <div className="mt-4 text-center">
+          <p className="text-sm text-gray-600">
+            Don't have an account?{' '}
+            <Link to="/register" className="text-blue-600 hover:text-blue-700 font-semibold">
+              Register here
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   )
