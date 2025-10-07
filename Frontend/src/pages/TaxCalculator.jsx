@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Calculator, Info, TrendingUp, TrendingDown } from 'lucide-react'
+import { Calculator, Info, TrendingUp, TrendingDown, HelpCircle, Zap } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import { translations } from '../data/translations'
 import { compareTaxRegimes, formatCurrency, validatePAN } from '../utils/taxCalculations'
 import apiClient from '../utils/api'
+import CalculatorGuide from '../components/CalculatorGuide'
 
 const taxFormSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -22,12 +23,14 @@ const TaxCalculator = ({ language }) => {
   const t = translations[language]
   const [results, setResults] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [showGuide, setShowGuide] = useState(false)
   
   const {
     register,
     handleSubmit,
     formState: { errors },
-    reset
+    reset,
+    setValue
   } = useForm({
     resolver: zodResolver(taxFormSchema),
     defaultValues: {
@@ -40,6 +43,18 @@ const TaxCalculator = ({ language }) => {
       otherDeductions: 0,
     }
   })
+  
+  // Load sample data
+  const loadSampleData = () => {
+    setValue('name', 'Sample User')
+    setValue('pan', 'ABCDE1234F')
+    setValue('grossSalary', 800000)
+    setValue('section80C', 150000)
+    setValue('section80D', 25000)
+    setValue('homeLoanInterest', 0)
+    setValue('otherDeductions', 0)
+    toast.success('Sample data loaded! Click Calculate to see results')
+  }
   
 
   
@@ -122,10 +137,28 @@ const TaxCalculator = ({ language }) => {
           <Calculator className="h-10 w-10 text-blue-600 mr-3" />
           {t.calculator}
         </h1>
-        <p className="text-xl text-gray-600">
+        <p className="text-xl text-gray-600 mb-4">
           Calculate your income tax for both old and new regimes
         </p>
+        <div className="flex items-center justify-center gap-3">
+          <button
+            onClick={() => setShowGuide(true)}
+            className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+          >
+            <HelpCircle className="h-5 w-5 mr-2" />
+            How to Use This Calculator
+          </button>
+          <button
+            onClick={loadSampleData}
+            className="inline-flex items-center px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
+          >
+            <Zap className="h-5 w-5 mr-2" />
+            Try with Sample Data
+          </button>
+        </div>
       </div>
+      
+      {showGuide && <CalculatorGuide onClose={() => setShowGuide(false)} language={language} />}
       
       <div className="grid lg:grid-cols-2 gap-8">
         {/* Input Form */}
