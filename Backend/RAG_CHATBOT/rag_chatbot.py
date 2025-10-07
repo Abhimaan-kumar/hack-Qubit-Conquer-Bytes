@@ -13,13 +13,15 @@ class AdvancedRAGChatbot:
         Initialize the Advanced RAG Chatbot
         
         Args:
-            document_id (str): Specific document ID to load, or None to load the latest
+            document_id (str): Specific document ID to load, or None to use ITA_primary as default
         """
         self.model = SentenceTransformer('all-MiniLM-L6-v2')
         self.chunks = []
         self.embeddings = None
         self.metadata = []
-        self.document_id = document_id
+        
+        # Default to ITA_primary if no specific document_id is provided
+        self.document_id = document_id if document_id else "ITA_primary"
         
         # Load the vector database
         self.load_vector_database()
@@ -42,16 +44,25 @@ class AdvancedRAGChatbot:
                 print("❌ No vector databases found.")
                 exit(1)
             
-            # Use specified document_id or get the latest one
-            if self.document_id:
-                vector_file = f"{self.document_id}_vectors"
-                metadata_file = f"{self.document_id}_metadata.json"
-            else:
-                # Get the most recent vector file
-                vector_file = max(vector_files, key=lambda x: os.path.getctime(os.path.join(vector_db_path, x)))
-                doc_id = vector_file.replace('_vectors', '')
-                metadata_file = f"{doc_id}_metadata.json"
-                self.document_id = doc_id
+            # Use specified document_id (default is ITA_primary)
+            vector_file = f"{self.document_id}_vectors"
+            metadata_file = f"{self.document_id}_metadata.json"
+            
+            # Check if the specified vector database exists
+            if not os.path.exists(os.path.join(vector_db_path, vector_file)):
+                print(f"⚠️ Specified database '{self.document_id}' not found. Available databases:")
+                for vf in vector_files:
+                    print(f"   - {vf.replace('_vectors', '')}")
+                
+                if vector_files:
+                    # Fall back to the most recent vector file
+                    vector_file = max(vector_files, key=lambda x: os.path.getctime(os.path.join(vector_db_path, x)))
+                    doc_id = vector_file.replace('_vectors', '')
+                    metadata_file = f"{doc_id}_metadata.json"
+                    self.document_id = doc_id
+                    print(f"📋 Using fallback database: {self.document_id}")
+                else:
+                    raise FileNotFoundError("No vector databases found")
             
             # Load FAISS index and chunks
             vector_dir = os.path.join(vector_db_path, vector_file)
@@ -113,14 +124,18 @@ class AdvancedRAGChatbot:
         scores, indices = self.faiss_index.search(query_embedding, top_k)
         
         relevant_chunks = []
-        for i, (score, idx) in enumerate(zip(scores[0], indices[0])):
-            if idx < len(self.chunks) and score >= similarity_threshold:
-                relevant_chunks.append({
-                    'chunk': self.chunks[idx],
-                    'similarity': float(score),
-                    'metadata': self.metadata[idx] if idx < len(self.metadata) else {'page': 'N/A', 'chunk_id': idx},
-                    'chunk_id': int(idx)
-                })
+        for i, (distance, idx) in enumerate(zip(scores[0], indices[0])):
+            if idx < len(self.chunks):
+                # Convert FAISS distance to similarity score (lower distance = higher similarity)
+                similarity_score = 1.0 / (1.0 + distance) if distance >= 0 else 1.0
+                
+                if similarity_score >= similarity_threshold:
+                    relevant_chunks.append({
+                        'chunk': self.chunks[idx],
+                        'similarity': float(similarity_score),
+                        'metadata': self.metadata[idx] if idx < len(self.metadata) else {'page': 'N/A', 'chunk_id': idx},
+                        'chunk_id': int(idx)
+                    })
         
         return relevant_chunks
     
