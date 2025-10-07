@@ -1,14 +1,19 @@
 // API Configuration and utilities
 // Prefer Vite env if provided, else fall back to sensible defaults
-const ENV_BASE = (typeof import !== 'undefined' && typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL)
-  ? import.meta.env.VITE_API_BASE_URL
-  : null;
+let API_BASE_URL = null;
+try {
+  // In Vite, import.meta.env is statically injected at build time
+  // eslint-disable-next-line no-undef
+  API_BASE_URL = (import.meta && import.meta.env && import.meta.env.VITE_API_BASE_URL) || null;
+} catch (_) {
+  // ignore
+}
 
-const API_BASE_URL = ENV_BASE
-  ? ENV_BASE
-  : (window.location.hostname === 'localhost'
-      ? 'http://localhost:5001/api'
-      : `${window.location.protocol}//${window.location.hostname}:5001/api`);
+if (!API_BASE_URL) {
+  API_BASE_URL = window.location.hostname === 'localhost'
+    ? 'http://localhost:5001/api'
+    : `${window.location.protocol}//${window.location.hostname}:5001/api`;
+}
 
 // API client with error handling
 class ApiClient {

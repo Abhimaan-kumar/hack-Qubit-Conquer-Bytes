@@ -166,7 +166,7 @@ Feel free to ask more specific questions about income tax!`
     try {
       // Call backend AI endpoint
       const sessionId = 'default';
-      const response = await apiClient.sendAIQuery({ query: message, queryType: 'general', sessionId });
+      const response = await apiClient.sendAIQuery({ query: message, queryType: 'general_tax_info', sessionId });
       const { data } = response;
       const botResponse = {
         id: Date.now() + 1,
