@@ -1,10 +1,15 @@
 import express from 'express';
+import axios from 'axios';
 import { protect } from '../middleware/auth.js';
 import { validateAIQuery, validateObjectId } from '../middleware/validation.js';
 import { catchAsync } from '../middleware/errorHandler.js';
 import AIQuery from '../models/AIQuery.js';
 
 const router = express.Router();
+
+// RAG Chatbot Flask server configuration
+const RAG_SERVER_URL = process.env.RAG_SERVER_URL || 'http://localhost:5555';
+const USE_RAG_CHATBOT = process.env.USE_RAG_CHATBOT !== 'false'; // Enable by default
 
 // All routes require authentication
 router.use(protect);
@@ -25,15 +30,27 @@ router.post('/query', validateAIQuery, catchAsync(async (req, res, next) => {
     status: 'processing'
   });
 
-  // Here you would integrate with OpenAI or other AI service
-  // For now, we'll simulate AI response
+  // Integrate with RAG Chatbot or fallback to mock responses
   try {
-    const aiResponse = await generateAIResponse(query, queryType, context);
+    let aiResponse;
+    
+    // Try to use RAG chatbot if enabled and available
+    if (USE_RAG_CHATBOT) {
+      try {
+        aiResponse = await generateRAGResponse(query, context);
+        console.log('✅ Used RAG Chatbot for response');
+      } catch (ragError) {
+        console.log('⚠️ RAG Chatbot unavailable, using fallback:', ragError.message);
+        aiResponse = await generateAIResponse(query, queryType, context);
+      }
+    } else {
+      aiResponse = await generateAIResponse(query, queryType, context);
+    }
 
     aiQuery.response = aiResponse.response;
     aiQuery.metadata = {
       ...aiQuery.metadata,
-      model: 'gpt-3.5-turbo',
+      model: aiResponse.model || 'mock-assistant',
       tokens: aiResponse.tokens,
       processingTime: aiResponse.processingTime,
       confidence: aiResponse.confidence,
@@ -283,7 +300,62 @@ router.get('/search', catchAsync(async (req, res, next) => {
   });
 }));
 
-// Mock AI response generator (replace with actual OpenAI integration)
+// RAG Chatbot response generator
+async function generateRAGResponse(query, context) {
+  const startTime = Date.now();
+
+  try {
+    const response = await axios.post(`${RAG_SERVER_URL}/api/rag/query`, {
+      query,
+      top_k: 5,
+      document_id: context?.document_id || 'ITA_primary'
+    }, {
+      timeout: 30000 // 30 second timeout
+    });
+
+    const processingTime = Date.now() - startTime;
+
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'RAG query failed');
+    }
+
+    const data = response.data.data;
+
+    return {
+      response: data.answer,
+      tokens: {
+        prompt: Math.floor(query.length / 4),
+        completion: Math.floor(data.answer.length / 4),
+        total: Math.floor((query.length + data.answer.length) / 4)
+      },
+      processingTime,
+      confidence: calculateConfidence(data.sources),
+      sources: data.sources.map(source => ({
+        type: 'income_tax_act',
+        reference: `Page ${source.page}`,
+        section: `Chunk ${source.chunk_id}`,
+        similarity: source.similarity
+      })),
+      model: 'rag-faiss-chatbot'
+    };
+  } catch (error) {
+    console.error('❌ RAG Server Error:', error.message);
+    throw error;
+  }
+}
+
+// Calculate confidence score based on similarity scores
+function calculateConfidence(sources) {
+  if (!sources || sources.length === 0) return 0.5;
+  
+  const avgSimilarity = sources.reduce((sum, source) => sum + (source.similarity || 0), 0) / sources.length;
+  
+  // Convert similarity (0-1) to confidence (0-1)
+  // Higher similarity = higher confidence
+  return Math.min(Math.max(avgSimilarity, 0.3), 0.95);
+}
+
+// Mock AI response generator (fallback when RAG is unavailable)
 async function generateAIResponse(query, queryType, context) {
   const startTime = Date.now();
 
