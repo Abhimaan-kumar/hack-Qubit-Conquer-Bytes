@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react'
 import { Upload, FileText, CheckCircle, AlertCircle, Download, Calculator, RefreshCcw, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { translations } from '../data/translations'
-import { extractForm16Data, formatCurrency } from '../utils/taxCalculations'
+import { formatCurrency } from '../utils/taxCalculations'
 import apiClient from '../utils/api'
 
 const DocumentUpload = ({ language }) => {
@@ -29,51 +29,6 @@ const DocumentUpload = ({ language }) => {
     }
   }, [])
 
-  // Mock PDF text extraction (in real app, use pdf-lib or similar)
-  const extractTextFromPDF = useCallback(() => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        // Mock extracted text from a sample Form 16
-        const mockText = `
-          FORM NO. 16
-          [See rule 31(1)(a)]
-          Certificate under section 203 of the Income-tax Act, 1961 for tax deducted at source from salary
-          
-          Name of the Employee: ABHISHEK JYOTI
-          PAN of the Employee: FGHSJ9027A
-          
-          Name/Address of the Employer: CCPC PUBLICATIONS INDIA PRIVATE LIMITED
-          TAN of the Employer: DELC05025E
-          
-          Assessment Year: 2025-26
-          
-          PART B
-          Details of salary paid and any tax deducted
-          
-          1. Gross Salary: Rs. 657944
-          2. Less: Allowance to the extent exempt under section 10: Rs. 0
-          3. Balance (1-2): Rs. 657944
-          4. Less: Deductions under section 16
-             (a) Standard deduction under section 16(ia): Rs. 50000
-             (b) Entertainment allowance under section 16(ii): Rs. 0
-             (c) Tax on employment under section 16(iii): Rs. 0
-          5. Total amount of deductions under section 16: Rs. 50000
-          6. Income chargeable under the head 'Salaries' (3-5): Rs. 607944
-          7. Add: Any other income reported by the employee: Rs. 0
-          8. Gross total income (6+7): Rs. 607944
-          9. Less: Deductions under Chapter VI-A: Rs. 25000
-          10. Total income (8-9): Rs. 582944
-          11. Tax on total income: Rs. 14147
-          12. Less: Relief under section 89 (attach details): Rs. 0
-          13. Net tax payable (11-12): Rs. 14147
-          14. Less: Tax deducted at source: Rs. 14147
-          15. Tax payable / (refundable): Rs. 0
-        `
-        resolve(mockText)
-      }, 2000)
-    })
-  }, [])
-
   const handleFileUpload = useCallback(async (file) => {
     if (!file.type.includes('pdf')) {
       toast.error('Please upload a PDF file')
@@ -96,15 +51,20 @@ const DocumentUpload = ({ language }) => {
       const res = await apiClient.uploadDocument(formData)
       toast.success(t.uploadSuccess)
 
-      // Optionally kick off processing
+      // Process document and get result immediately
       if (res?.data?._id) {
-        await apiClient.processDocument(res.data._id)
+        const processResult = await apiClient.processDocument(res.data._id)
+        
+        // Backend now returns extracted data immediately
+        if (processResult?.data?.extractedData) {
+          console.log('Extracted data from backend:', processResult.data.extractedData)
+          setExtractedData(processResult.data.extractedData)
+        } else {
+          console.warn('No extracted data in response')
+          toast.info('Document uploaded but extraction data not available.')
+        }
       }
 
-      // For UI demo, keep extractedData via mock until backend processing callback is implemented
-      const text = await extractTextFromPDF()
-      const data = extractForm16Data(text)
-      setExtractedData(data)
       fetchDocuments() // Refresh documents list
     } catch (error) {
       toast.error(t.uploadError || 'Upload failed. Please try again.')
@@ -112,7 +72,7 @@ const DocumentUpload = ({ language }) => {
     } finally {
       setLoading(false)
     }
-  }, [t.uploadSuccess, t.uploadError, extractTextFromPDF, fetchDocuments])
+  }, [t.uploadSuccess, t.uploadError, fetchDocuments])
 
   useEffect(() => {
     fetchDocuments()
@@ -147,12 +107,32 @@ const DocumentUpload = ({ language }) => {
   }
   
   const handleEditData = (field, value) => {
-    setExtractedData(prev => ({
-      ...prev,
-      [field]: field.includes('Salary') || field.includes('Deduction') || field.includes('Income') || field.includes('Tax')
-        ? parseInt(value) || 0
-        : value
-    }))
+    setExtractedData(prev => {
+      // Handle nested properties like 'personalInfo.name' or 'income.salary'
+      if (field.includes('.')) {
+        const [parent, child] = field.split('.')
+        return {
+          ...prev,
+          [parent]: {
+            ...prev[parent],
+            [child]: field.toLowerCase().includes('salary') || 
+                     field.toLowerCase().includes('deduction') || 
+                     field.toLowerCase().includes('income') || 
+                     field.toLowerCase().includes('tax') ||
+                     field.toLowerCase().includes('tds')
+              ? parseInt(value) || 0
+              : value
+          }
+        }
+      }
+      // Handle flat properties
+      return {
+        ...prev,
+        [field]: field.includes('Salary') || field.includes('Deduction') || field.includes('Income') || field.includes('Tax')
+          ? parseInt(value) || 0
+          : value
+      }
+    })
   }
   
   const resetUpload = () => {
@@ -168,6 +148,25 @@ const DocumentUpload = ({ language }) => {
       fetchDocuments()
     } catch (error) {
       console.error('Process error:', error)
+      toast.error('Failed to process document')
+    }
+  }
+
+  const handleViewDocument = async (id) => {
+    try {
+      const doc = await apiClient.getDocument(id)
+      if (doc?.data?.extractedData) {
+        console.log('Viewing extracted data:', doc.data.extractedData)
+        setExtractedData(doc.data.extractedData)
+        setUploadedFile({ name: doc.data.originalName })
+        // Scroll to the extracted data section
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      } else {
+        toast.info('No extracted data available. Try processing the document first.')
+      }
+    } catch (error) {
+      console.error('View error:', error)
+      toast.error('Failed to load document data')
       toast.error('Failed to start processing')
     }
   }
@@ -309,8 +308,8 @@ const DocumentUpload = ({ language }) => {
                     </label>
                     <input
                       type="text"
-                      value={extractedData.employeeName || ''}
-                      onChange={(e) => handleEditData('employeeName', e.target.value)}
+                      value={extractedData.personalInfo?.name || ''}
+                      onChange={(e) => handleEditData('personalInfo.name', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
@@ -321,8 +320,8 @@ const DocumentUpload = ({ language }) => {
                     </label>
                     <input
                       type="text"
-                      value={extractedData.pan || ''}
-                      onChange={(e) => handleEditData('pan', e.target.value)}
+                      value={extractedData.personalInfo?.pan || ''}
+                      onChange={(e) => handleEditData('personalInfo.pan', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 uppercase"
                       maxLength={10}
                     />
@@ -334,8 +333,8 @@ const DocumentUpload = ({ language }) => {
                     </label>
                     <input
                       type="text"
-                      value={extractedData.assessmentYear || '2025-26'}
-                      onChange={(e) => handleEditData('assessmentYear', e.target.value)}
+                      value={extractedData.personalInfo?.assessmentYear || '2025-26'}
+                      onChange={(e) => handleEditData('personalInfo.assessmentYear', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
@@ -353,8 +352,8 @@ const DocumentUpload = ({ language }) => {
                     </label>
                     <input
                       type="number"
-                      value={extractedData.grossSalary || 0}
-                      onChange={(e) => handleEditData('grossSalary', e.target.value)}
+                      value={extractedData.income?.salary || 0}
+                      onChange={(e) => handleEditData('income.salary', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
@@ -365,8 +364,8 @@ const DocumentUpload = ({ language }) => {
                     </label>
                     <input
                       type="number"
-                      value={extractedData.standardDeduction || 50000}
-                      onChange={(e) => handleEditData('standardDeduction', e.target.value)}
+                      value={extractedData.income?.standardDeduction || 50000}
+                      onChange={(e) => handleEditData('income.standardDeduction', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
@@ -377,8 +376,8 @@ const DocumentUpload = ({ language }) => {
                     </label>
                     <input
                       type="number"
-                      value={extractedData.totalDeductions || 0}
-                      onChange={(e) => handleEditData('totalDeductions', e.target.value)}
+                      value={extractedData.deductions?.total || 0}
+                      onChange={(e) => handleEditData('deductions.total', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
@@ -389,8 +388,8 @@ const DocumentUpload = ({ language }) => {
                     </label>
                     <input
                       type="number"
-                      value={extractedData.taxDeducted || 0}
-                      onChange={(e) => handleEditData('taxDeducted', e.target.value)}
+                      value={extractedData.taxPaid?.tds || 0}
+                      onChange={(e) => handleEditData('taxPaid.tds', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
@@ -398,26 +397,110 @@ const DocumentUpload = ({ language }) => {
               </div>
               
               {/* Summary */}
-              <div className="mt-8 p-6 bg-gray-50 rounded-lg">
-                <h3 className="font-semibold text-gray-700 mb-4">Summary</h3>
-                <div className="grid md:grid-cols-3 gap-4 text-center">
-                  <div className="bg-white p-4 rounded-lg">
-                    <p className="text-sm text-gray-600 mb-1">Gross Salary</p>
+              <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+                <h3 className="font-semibold text-gray-800 mb-4 text-lg">📊 Financial Summary</h3>
+                <div className="grid md:grid-cols-4 gap-4 text-center">
+                  <div className="bg-white p-4 rounded-lg shadow-sm border border-blue-100">
+                    <p className="text-sm text-gray-600 mb-1">💰 Gross Salary</p>
                     <p className="text-xl font-bold text-blue-600">
-                      {formatCurrency(extractedData.grossSalary || 0)}
+                      {formatCurrency(extractedData.income?.salary || 0)}
                     </p>
                   </div>
-                  <div className="bg-white p-4 rounded-lg">
-                    <p className="text-sm text-gray-600 mb-1">Total Deductions</p>
+                  <div className="bg-white p-4 rounded-lg shadow-sm border border-green-100">
+                    <p className="text-sm text-gray-600 mb-1">📉 Total Deductions</p>
                     <p className="text-xl font-bold text-green-600">
-                      {formatCurrency(extractedData.totalDeductions || 0)}
+                      {formatCurrency(extractedData.deductions?.total || 0)}
                     </p>
                   </div>
-                  <div className="bg-white p-4 rounded-lg">
-                    <p className="text-sm text-gray-600 mb-1">Tax Deducted</p>
-                    <p className="text-xl font-bold text-orange-600">
-                      {formatCurrency(extractedData.taxDeducted || 0)}
+                  <div className="bg-white p-4 rounded-lg shadow-sm border border-purple-100">
+                    <p className="text-sm text-gray-600 mb-1">🧮 Taxable Income</p>
+                    <p className="text-xl font-bold text-purple-600">
+                      {formatCurrency(extractedData.taxComputation?.taxableIncome || ((extractedData.income?.salary || 0) - (extractedData.deductions?.total || 0)))}
                     </p>
+                  </div>
+                  <div className="bg-white p-4 rounded-lg shadow-sm border border-orange-100">
+                    <p className="text-sm text-gray-600 mb-1">💸 Tax Deducted (TDS)</p>
+                    <p className="text-xl font-bold text-orange-600">
+                      {formatCurrency(extractedData.taxPaid?.tds || 0)}
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Tax Liability Summary */}
+                <div className="mt-6 pt-4 border-t border-blue-200">
+                  <h4 className="font-semibold text-gray-800 mb-3 text-center">🎯 Tax Calculation (New Tax Regime)</h4>
+                  <div className="grid md:grid-cols-4 gap-3 text-center">
+                    <div className="bg-white p-3 rounded-lg shadow-sm border border-indigo-100">
+                      <p className="text-xs text-gray-600 mb-1">💳 Tax Before Rebate</p>
+                      <p className="text-lg font-bold text-indigo-600">
+                        {formatCurrency(extractedData.taxComputation?.totalTaxPayable || 0)}
+                      </p>
+                    </div>
+                    <div className="bg-white p-3 rounded-lg shadow-sm border border-purple-100">
+                      <p className="text-xs text-gray-600 mb-1">🎁 Section 87A Rebate</p>
+                      <p className="text-lg font-bold text-purple-600">
+                        -{formatCurrency(extractedData.taxComputation?.rebate87A || 0)}
+                      </p>
+                    </div>
+                    <div className="bg-white p-3 rounded-lg shadow-sm border border-orange-100">
+                      <p className="text-xs text-gray-600 mb-1">💰 Tax Paid (TDS)</p>
+                      <p className="text-lg font-bold text-orange-600">
+                        {formatCurrency(extractedData.taxPaid?.tds || 0)}
+                      </p>
+                    </div>
+                    <div className={`bg-white p-3 rounded-lg shadow-sm border ${
+                      (extractedData.taxComputation?.netTaxPayable || 0) - (extractedData.taxPaid?.tds || 0) > 0 
+                        ? 'border-red-200' : 'border-green-200'
+                    }`}>
+                      <p className="text-xs text-gray-600 mb-1">
+                        {(extractedData.taxComputation?.netTaxPayable || 0) - (extractedData.taxPaid?.tds || 0) > 0 
+                          ? '🔴 Tax Due' : '🟢 No Tax Due'
+                        }
+                      </p>
+                      <p className={`text-lg font-bold ${
+                        (extractedData.taxComputation?.netTaxPayable || 0) - (extractedData.taxPaid?.tds || 0) > 0 
+                          ? 'text-red-600' : 'text-green-600'
+                      }`}>
+                        {(extractedData.taxComputation?.netTaxPayable || 0) - (extractedData.taxPaid?.tds || 0) > 0 
+                          ? formatCurrency((extractedData.taxComputation?.netTaxPayable || 0) - (extractedData.taxPaid?.tds || 0))
+                          : '₹0'
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Rebate Explanation */}
+                  {extractedData.taxComputation?.qualifiesForRebate && (
+                    <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-2xl">🎉</span>
+                        <div>
+                          <p className="text-sm font-semibold text-green-800">Great News!</p>
+                          <p className="text-xs text-green-700">
+                            You qualify for full tax rebate under Section 87A since your taxable income is ≤ ₹7,00,000.
+                            {extractedData.taxComputation?.netTaxPayable === 0 && " You don't need to pay any tax!"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Additional Info */}
+                <div className="mt-4 pt-4 border-t border-blue-200">
+                  <div className="grid md:grid-cols-2 gap-4 text-center">
+                    <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
+                      <p className="text-sm text-gray-600 mb-1">📋 Assessment Year</p>
+                      <p className="text-lg font-semibold text-gray-800">
+                        {extractedData.personalInfo?.assessmentYear || '2025-26'}
+                      </p>
+                    </div>
+                    <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
+                      <p className="text-sm text-gray-600 mb-1">🎯 Tax Regime</p>
+                      <p className="text-lg font-semibold text-gray-800">
+                        {extractedData.personalInfo?.taxRegime || 'New Tax Regime'}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -490,6 +573,9 @@ const DocumentUpload = ({ language }) => {
                       </span>
                     </td>
                     <td className="py-2 pr-4 space-x-2">
+                      {doc.processingStatus === 'completed' && (
+                        <button onClick={() => handleViewDocument(doc._id)} className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700">View</button>
+                      )}
                       <button onClick={() => handleProcess(doc._id)} className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700">Process</button>
                       <a href={`${apiClient.baseURL}/documents/${doc._id}/download`} className="px-2 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200">Download</a>
                       <button onClick={() => handleDelete(doc._id)} className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 flex items-center"><Trash2 className="h-3 w-3 mr-1" />Delete</button>

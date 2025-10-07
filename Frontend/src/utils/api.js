@@ -163,6 +163,10 @@ class ApiClient {
     return this.request('/documents');
   }
 
+  async getDocument(documentId) {
+    return this.request(`/documents/${documentId}`);
+  }
+
   async downloadDocument(documentId) {
     const url = `${this.baseURL}/documents/${documentId}/download`;
     const headers = {};
@@ -223,6 +227,7 @@ export const {
   uploadDocument,
   processDocument,
   getDocuments,
+  getDocument,
   downloadDocument,
   sendAIQuery,
   getAIHistory,

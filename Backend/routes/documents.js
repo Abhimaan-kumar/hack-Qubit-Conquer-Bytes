@@ -6,6 +6,7 @@ import { protect, ownerOrAdmin } from '../middleware/auth.js';
 import { validateDocumentUpload, validateObjectId } from '../middleware/validation.js';
 import { catchAsync } from '../middleware/errorHandler.js';
 import TaxDocument from '../models/TaxDocument.js';
+import { extractTextFromPDF, parseForm16, validateForm16Data } from '../utils/pdfExtractor.js';
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(process.cwd(), 'uploads');
@@ -252,7 +253,7 @@ router.get('/stats/summary', catchAsync(async (req, res, next) => {
   });
 }));
 
-// @desc    Process document (AI analysis)
+// @desc    Process document (AI analysis with real PDF extraction)
 // @route   POST /api/documents/:id/process
 // @access  Private
 router.post('/:id/process', validateObjectId, ownerOrAdmin(TaxDocument), catchAsync(async (req, res, next) => {
@@ -269,34 +270,126 @@ router.post('/:id/process', validateObjectId, ownerOrAdmin(TaxDocument), catchAs
   document.processingStatus = 'processing';
   await document.save();
 
-  // Here you would integrate with AI service for document analysis
-  // For now, we'll simulate processing
   try {
-    // Simulate AI processing delay
-    setTimeout(async () => {
-      // Mock extracted data based on document type
-      const mockData = generateMockExtractedData(document.documentType);
+    // Process synchronously - return result immediately
+    let extractedData = {};
+    let aiAnalysis = {
+      summary: '',
+      recommendations: [],
+      confidence: 0,
+      processedAt: new Date()
+    };
 
-      // Mock AI analysis
-      const aiAnalysis = {
-        summary: `Analysis completed for ${document.documentType}`,
-        recommendations: ['Review deductions', 'Check for missing documents'],
-        confidence: 0.85,
-        processedAt: new Date()
-      };
+    // Extract data based on document type
+    if (document.documentType === 'form16' && document.mimeType === 'application/pdf') {
+      // Extract text from PDF
+      const pdfText = await extractTextFromPDF(document.path);
+      
+      // Parse Form-16 data
+      const form16Data = parseForm16(pdfText);
+      
+      // Validate the extracted data
+      const validation = validateForm16Data(form16Data);
+          
+          // Structure extracted data
+          extractedData = {
+            income: {
+              salary: form16Data.grossSalary || 0,
+              salaryReceived: form16Data.salaryReceived || 0,
+              salaryIncome: form16Data.salaryIncome || 0,
+              standardDeduction: form16Data.standardDeduction || 0,
+              houseProperty: form16Data.housePropertyIncome || 0,
+              business: 0,
+              capitalGains: 0,
+              otherSources: form16Data.otherIncome || 0,
+              total: form16Data.grossTotalIncome || form16Data.grossSalary || 0
+            },
+            deductions: {
+              section80c: form16Data.section80C || 0,
+              section80d: form16Data.section80D || 0,
+              section24b: form16Data.section24b || 0,
+              section80ccd1b: form16Data.section80CCD1B || 0,
+              section80e: form16Data.section80E || 0,
+              section80g: form16Data.section80G || 0,
+              other: 0,
+              total: form16Data.totalDeductions || 0
+            },
+            taxPaid: {
+              tds: form16Data.tdsDeducted || 0,
+              advanceTax: 0,
+              selfAssessment: 0,
+              total: form16Data.tdsDeducted || 0
+            },
+            taxComputation: calculateCorrectTax(form16Data),
+            personalInfo: {
+              name: form16Data.employeeName || '',
+              pan: form16Data.pan || '',
+              employerName: form16Data.employerName || '',
+              employerTAN: form16Data.employerTAN || '',
+              assessmentYear: form16Data.assessmentYear || '',
+              financialYear: form16Data.financialYear || '',
+              certificateNumber: form16Data.certificateNumber || '',
+              periodFrom: form16Data.periodFrom || '',
+              periodTo: form16Data.periodTo || '',
+              taxRegime: form16Data.optingOutNewRegime === 'No' ? 'New Tax Regime' : 'Old Tax Regime',
+              verifierName: form16Data.verifierName || '',
+              verifierDesignation: form16Data.verifierDesignation || ''
+            },
+            validation: validation,
+            rawExtractedData: form16Data
+          };
 
-      await document.markAsProcessed(mockData, aiAnalysis);
-    }, 2000);
+          // Generate AI analysis
+          const confidenceScore = form16Data.metadata?.confidenceScore || (form16Data.extractionConfidence / 100) || 0;
+          const confidencePercent = Math.round(confidenceScore * 100);
+          
+          aiAnalysis = {
+            summary: validation.isValid 
+              ? `Successfully extracted Form-16 data with ${confidencePercent}% confidence (${form16Data.metadata?.fieldsExtracted || 0}/${form16Data.metadata?.totalFields || 40} fields)` 
+              : 'Form-16 data extracted with errors',
+            recommendations: [
+              ...validation.warnings,
+              ...(form16Data.section80C < 150000 ? ['Consider maximizing Section 80C deductions (up to ₹1,50,000)'] : []),
+              ...(form16Data.section80D < 25000 ? ['Consider health insurance for Section 80D benefits (up to ₹25,000)'] : []),
+              ...(form16Data.section80CCD1B === 0 ? ['Consider NPS investment under Section 80CCD(1B) for additional ₹50,000 deduction'] : []),
+              'Verify all extracted values before filing'
+            ],
+            confidence: confidenceScore,
+            errors: validation.errors,
+            warnings: validation.warnings,
+            processedAt: new Date(),
+            metadata: form16Data.metadata
+          };
+        } else {
+          // Fallback to mock data for other document types
+          extractedData = generateMockExtractedData(document.documentType);
+          aiAnalysis = {
+            summary: `Basic processing completed for ${document.documentType}`,
+            recommendations: ['Please verify extracted data', 'Upload Form-16 for detailed analysis'],
+            confidence: 0.6,
+            processedAt: new Date()
+          };
+        }
 
-    res.status(200).json({
-      success: true,
-      message: 'Document processing started'
-    });
+        // Mark document as processed
+        await document.markAsProcessed(extractedData, aiAnalysis);
+        
+        // Return success response with extracted data
+        res.status(200).json({
+          success: true,
+          message: 'Document processed successfully',
+          data: {
+            ...document.toObject(),
+            extractedData,
+            aiAnalysis
+          }
+        });
   } catch (error) {
+    console.error('Document processing error:', error);
     await document.markAsFailed(error.message);
     return res.status(500).json({
       success: false,
-      message: 'Document processing failed'
+      message: 'Document processing failed: ' + error.message
     });
   }
 }));
@@ -333,6 +426,67 @@ function generateMockExtractedData(documentType) {
   baseData.taxPaid.total = Object.values(baseData.taxPaid).reduce((sum, val) => sum + (val || 0), 0) - baseData.taxPaid.total;
 
   return baseData;
+}
+
+// Helper function to calculate correct tax (New Tax Regime FY 2024-25)
+function calculateCorrectTax(form16Data) {
+  const grossSalary = form16Data.grossSalary || 0;
+  const standardDeduction = form16Data.standardDeduction || 50000; // Standard deduction
+  const totalDeductions = form16Data.totalDeductions || 0; // Chapter VI-A deductions
+  
+  // Correct taxable income calculation
+  const taxableIncome = Math.max(0, grossSalary - standardDeduction - totalDeductions);
+  
+  // New Tax Regime slabs for FY 2024-25 (AY 2025-26)
+  let taxOnIncome = 0;
+  
+  if (taxableIncome > 300000) {
+    if (taxableIncome <= 600000) {
+      // 5% on income from 3,00,001 to 6,00,000
+      taxOnIncome = (taxableIncome - 300000) * 0.05;
+    } else if (taxableIncome <= 900000) {
+      // 5% on 3,00,000 + 10% on income from 6,00,001 to 9,00,000
+      taxOnIncome = 300000 * 0.05 + (taxableIncome - 600000) * 0.10;
+    } else if (taxableIncome <= 1200000) {
+      // Previous + 15% on income from 9,00,001 to 12,00,000
+      taxOnIncome = 300000 * 0.05 + 300000 * 0.10 + (taxableIncome - 900000) * 0.15;
+    } else if (taxableIncome <= 1500000) {
+      // Previous + 20% on income from 12,00,001 to 15,00,000
+      taxOnIncome = 300000 * 0.05 + 300000 * 0.10 + 300000 * 0.15 + (taxableIncome - 1200000) * 0.20;
+    } else {
+      // Previous + 30% on income above 15,00,000
+      taxOnIncome = 300000 * 0.05 + 300000 * 0.10 + 300000 * 0.15 + 300000 * 0.20 + (taxableIncome - 1500000) * 0.30;
+    }
+  }
+  
+  // Health and Education Cess @ 4%
+  const healthEducationCess = taxOnIncome * 0.04;
+  
+  // Total tax before rebate
+  const totalTaxBeforeRebate = taxOnIncome + healthEducationCess;
+  
+  // Section 87A Rebate (Full rebate if taxable income <= 700000)
+  let rebate87A = 0;
+  if (taxableIncome <= 700000 && totalTaxBeforeRebate > 0) {
+    rebate87A = Math.min(totalTaxBeforeRebate, 25000); // Full rebate up to 25,000
+  }
+  
+  // Final tax payable
+  const netTaxPayable = Math.max(0, totalTaxBeforeRebate - rebate87A);
+  
+  return {
+    taxableIncome: Math.round(taxableIncome),
+    taxOnIncome: Math.round(taxOnIncome),
+    surcharge: 0, // No surcharge for income below 50 lakhs
+    healthEducationCess: Math.round(healthEducationCess),
+    totalTaxPayable: Math.round(totalTaxBeforeRebate),
+    rebate87A: Math.round(rebate87A),
+    relief89: form16Data.reliefUnder89 || 0,
+    netTaxPayable: Math.round(netTaxPayable),
+    // Additional info for frontend
+    qualifiesForRebate: taxableIncome <= 700000,
+    effectiveTaxRate: taxableIncome > 0 ? ((netTaxPayable / taxableIncome) * 100).toFixed(2) : 0
+  };
 }
 
 export default router;
