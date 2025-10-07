@@ -1,0 +1,33 @@
+{
+  "document_id": "ita_enhanced_2a73c114_1759858874",
+  "filename": "ita-1961-amended.pdf",
+  "source_path": "ita-1961-amended.pdf",
+  "processing_type": "enhanced_ita_vectorizer",
+  "total_pages": 1,
+  "successful_pages": 1,
+  "file_size_mb": 0.00170135498046875,
+  "total_chunks": 1,
+  "chunk_size": 1000,
+  "chunk_overlap": 200,
+  "processing_time_seconds": 0.07,
+  "embeddings_model": "all-MiniLM-L6-v2",
+  "processed_at": "2025-10-07 17:41:14",
+  "chunks_metadata": [
+    {
+      "chunk_id": "ita_enhanced_chunk_0",
+      "page": 1,
+      "length": 559,
+      "key_terms": [
+        "income tax",
+        "agricultural income",
+        "section",
+        "exemption",
+        "tax",
+        "income",
+        "rate",
+        "section 10"
+      ],
+      "chunk_preview": "--- Page 1 ---\nIncome Tax Act, 1961 - Agricultural Income Definition of Agricultural Income: Agricultural income refers to income derived from agricul..."
+    }
+  ]
+}

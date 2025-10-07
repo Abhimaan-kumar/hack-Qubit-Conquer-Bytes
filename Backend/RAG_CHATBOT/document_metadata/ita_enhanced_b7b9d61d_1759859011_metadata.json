@@ -1,0 +1,508 @@
+{
+  "document_id": "ita_enhanced_b7b9d61d_1759859011",
+  "filename": "ita_comprehensive_2024.pdf",
+  "source_path": "ita_comprehensive_2024.pdf",
+  "processing_type": "enhanced_ita_vectorizer",
+  "total_pages": 25,
+  "successful_pages": 25,
+  "file_size_mb": 0.032794952392578125,
+  "total_chunks": 30,
+  "chunk_size": 1000,
+  "chunk_overlap": 200,
+  "processing_time_seconds": 2.74,
+  "embeddings_model": "all-MiniLM-L6-v2",
+  "processed_at": "2025-10-07 17:43:33",
+  "chunks_metadata": [
+    {
+      "chunk_id": "ita_enhanced_chunk_0",
+      "page": 1,
+      "length": 553,
+      "key_terms": [
+        "income tax",
+        "deduction",
+        "tax",
+        "income",
+        "business",
+        "capital gains",
+        "computation"
+      ],
+      "chunk_preview": "--- Page 1 ---\nINCOME TAX ACT, 1961 Complete Reference Guide TABLE OF CONTENTS Chapter 1: Preliminary Chapter 2: Basis of Charge Chapter 3: Incomes wh..."
+    },
+    {
+      "chunk_id": "ita_enhanced_chunk_2",
+      "page": 2,
+      "length": 966,
+      "key_terms": [
+        "agricultural income",
+        "section",
+        "tax",
+        "income",
+        "section 1",
+        "section 2"
+      ],
+      "chunk_preview": "CHAPTER 1 - PRELIMINARY Section 1. Short title, extent and commencement: (1) This Act may be called the Income-tax Act, 1961. (2) It extends to the wh..."
+    },
+    {
+      "chunk_id": "ita_enhanced_chunk_3",
+      "page": 2,
+      "length": 855,
+      "key_terms": [
+        "assessment",
+        "tax",
+        "income"
+      ],
+      "chunk_preview": ".—For the purposes of sub-clause (b), the process which renders the produce fit for the market does not amount to a manufacturing process. (1B) 'asses..."
+    },
+    {
+      "chunk_id": "ita_enhanced_chunk_5",
+      "page": 3,
+      "length": 858,
+      "key_terms": [
+        "section",
+        "assessment",
+        "tax",
+        "income",
+        "rate",
+        "section 3",
+        "section 4",
+        "section 5"
+      ],
+      "chunk_preview": "CHAPTER 2 - BASIS OF CHARGE Section 3. Charge of income-tax: Subject to the provisions of this Act, there shall be charged for every assessment year c..."
+    },
+    {
+      "chunk_id": "ita_enhanced_chunk_6",
+      "page": 3,
+      "length": 595,
+      "key_terms": [
+        "section",
+        "income",
+        "section 5",
+        "section 14"
+      ],
+      "chunk_preview": ". Section 5. Total income: Subject to the provisions of this Act, 'total income' of any previous year of a person who is a resident means the total am..."
+    },
+    {
+      "chunk_id": "ita_enhanced_chunk_8",
+      "page": 4,
+      "length": 376,
+      "key_terms": [
+        "agricultural income",
+        "section",
+        "income",
+        "section 10",
+        "section 2"
+      ],
+      "chunk_preview": "CHAPTER 3 - INCOMES WHICH DO NOT FORM PART OF TOTAL INCOME Section 10. Incomes not included in total income: In computing the total income of a previo..."
+    },
+    {
+      "chunk_id": "ita_enhanced_chunk_9",
+      "page": 4,
+      "length": 963,
+      "key_terms": [
+        "agricultural income",
+        "section",
+        "income"
+      ],
+      "chunk_preview": ". Explanation: For the purposes of this section, 'agricultural income' means— (a) any rent or revenue derived from land which is situated in India and..."
+    },
+    {
+      "chunk_id": "ita_enhanced_chunk_10",
+      "page": 4,
+      "length": 127,
+      "key_terms": [],
+      "chunk_preview": ", or in respect of units of, a Mutual Fund specified under clause (23D) or a notified pension fund referred to in clause (23FE)"
+    },
+    {
+      "chunk_id": "ita_enhanced_chunk_13",
+      "page": 5,
+      "length": 868,
+      "key_terms": [
+        "section",
+        "tax",
+        "income",
+        "salary",
+        "business",
+        "capital gains",
+        "computation",
+        "section 14",
+        "section 15",
+        "section 16"
+      ],
+      "chunk_preview": "CHAPTER 4 - COMPUTATION OF TOTAL INCOME Section 14. Definitions: Save as otherwise provided in this Act, all income shall, for the purposes of charge ..."
+    },
+    {
+      "chunk_id": "ita_enhanced_chunk_14",
+      "page": 5,
+      "length": 267,
+      "key_terms": [
+        "section",
+        "deduction",
+        "tax",
+        "income",
+        "allowance",
+        "section 16"
+      ],
+      "chunk_preview": ". Section 16. Deductions from salaries: The income chargeable under the head 'Salaries' shall be computed after making the following deductions, namel..."
+    },
+    {
+      "chunk_id": "ita_enhanced_chunk_16",
+      "page": 6,
+      "length": 987,
+      "key_terms": [
+        "income tax",
+        "section",
+        "deduction",
+        "exemption",
+        "assessment",
+        "penalty",
+        "tax",
+        "income",
+        "allowance",
+        "computation"
+      ],
+      "chunk_preview": "SECTION 20 - TAX PROVISIONS This section deals with specific provisions of income tax law as per Section 20. (5) Tax computation and assessment proced..."
+    },
+    {
+      "chunk_id": "ita_enhanced_chunk_18",
+      "page": 7,
+      "length": 987,
+      "key_terms": [
+        "income tax",
+        "section",
+        "deduction",
+        "exemption",
+        "assessment",
+        "penalty",
+        "tax",
+        "income",
+        "allowance",
+        "computation"
+      ],
+      "chunk_preview": "SECTION 21 - TAX PROVISIONS This section deals with specific provisions of income tax law as per Section 21. (6) Tax computation and assessment proced..."
+    },
+    {
+      "chunk_id": "ita_enhanced_chunk_20",
+      "page": 8,
+      "length": 987,
+      "key_terms": [
+        "income tax",
+        "section",
+        "deduction",
+        "exemption",
+        "assessment",
+        "penalty",
+        "tax",
+        "income",
+        "allowance",
+        "computation"
+      ],
+      "chunk_preview": "SECTION 22 - TAX PROVISIONS This section deals with specific provisions of income tax law as per Section 22. (7) Tax computation and assessment proced..."
+    },
+    {
+      "chunk_id": "ita_enhanced_chunk_22",
+      "page": 9,
+      "length": 987,
+      "key_terms": [
+        "income tax",
+        "section",
+        "deduction",
+        "exemption",
+        "assessment",
+        "penalty",
+        "tax",
+        "income",
+        "allowance",
+        "computation"
+      ],
+      "chunk_preview": "SECTION 23 - TAX PROVISIONS This section deals with specific provisions of income tax law as per Section 23. (8) Tax computation and assessment proced..."
+    },
+    {
+      "chunk_id": "ita_enhanced_chunk_24",
+      "page": 10,
+      "length": 987,
+      "key_terms": [
+        "income tax",
+        "section",
+        "deduction",
+        "exemption",
+        "assessment",
+        "penalty",
+        "tax",
+        "income",
+        "allowance",
+        "computation"
+      ],
+      "chunk_preview": "SECTION 24 - TAX PROVISIONS This section deals with specific provisions of income tax law as per Section 24. (9) Tax computation and assessment proced..."
+    },
+    {
+      "chunk_id": "ita_enhanced_chunk_26",
+      "page": 11,
+      "length": 991,
+      "key_terms": [
+        "income tax",
+        "section",
+        "deduction",
+        "exemption",
+        "assessment",
+        "penalty",
+        "tax",
+        "income",
+        "allowance",
+        "computation"
+      ],
+      "chunk_preview": "SECTION 25 - TAX PROVISIONS This section deals with specific provisions of income tax law as per Section 25. (10) Tax computation and assessment proce..."
+    },
+    {
+      "chunk_id": "ita_enhanced_chunk_28",
+      "page": 12,
+      "length": 991,
+      "key_terms": [
+        "income tax",
+        "section",
+        "deduction",
+        "exemption",
+        "assessment",
+        "penalty",
+        "tax",
+        "income",
+        "allowance",
+        "computation"
+      ],
+      "chunk_preview": "SECTION 26 - TAX PROVISIONS This section deals with specific provisions of income tax law as per Section 26. (11) Tax computation and assessment proce..."
+    },
+    {
+      "chunk_id": "ita_enhanced_chunk_30",
+      "page": 13,
+      "length": 991,
+      "key_terms": [
+        "income tax",
+        "section",
+        "deduction",
+        "exemption",
+        "assessment",
+        "penalty",
+        "tax",
+        "income",
+        "allowance",
+        "computation"
+      ],
+      "chunk_preview": "SECTION 27 - TAX PROVISIONS This section deals with specific provisions of income tax law as per Section 27. (12) Tax computation and assessment proce..."
+    },
+    {
+      "chunk_id": "ita_enhanced_chunk_32",
+      "page": 14,
+      "length": 991,
+      "key_terms": [
+        "income tax",
+        "section",
+        "deduction",
+        "exemption",
+        "assessment",
+        "penalty",
+        "tax",
+        "income",
+        "allowance",
+        "computation"
+      ],
+      "chunk_preview": "SECTION 28 - TAX PROVISIONS This section deals with specific provisions of income tax law as per Section 28. (13) Tax computation and assessment proce..."
+    },
+    {
+      "chunk_id": "ita_enhanced_chunk_34",
+      "page": 15,
+      "length": 991,
+      "key_terms": [
+        "income tax",
+        "section",
+        "deduction",
+        "exemption",
+        "assessment",
+        "penalty",
+        "tax",
+        "income",
+        "allowance",
+        "computation"
+      ],
+      "chunk_preview": "SECTION 29 - TAX PROVISIONS This section deals with specific provisions of income tax law as per Section 29. (14) Tax computation and assessment proce..."
+    },
+    {
+      "chunk_id": "ita_enhanced_chunk_36",
+      "page": 16,
+      "length": 991,
+      "key_terms": [
+        "income tax",
+        "section",
+        "deduction",
+        "exemption",
+        "assessment",
+        "penalty",
+        "tax",
+        "income",
+        "allowance",
+        "computation"
+      ],
+      "chunk_preview": "SECTION 30 - TAX PROVISIONS This section deals with specific provisions of income tax law as per Section 30. (15) Tax computation and assessment proce..."
+    },
+    {
+      "chunk_id": "ita_enhanced_chunk_38",
+      "page": 17,
+      "length": 991,
+      "key_terms": [
+        "income tax",
+        "section",
+        "deduction",
+        "exemption",
+        "assessment",
+        "penalty",
+        "tax",
+        "income",
+        "allowance",
+        "computation"
+      ],
+      "chunk_preview": "SECTION 31 - TAX PROVISIONS This section deals with specific provisions of income tax law as per Section 31. (16) Tax computation and assessment proce..."
+    },
+    {
+      "chunk_id": "ita_enhanced_chunk_40",
+      "page": 18,
+      "length": 991,
+      "key_terms": [
+        "income tax",
+        "section",
+        "deduction",
+        "exemption",
+        "assessment",
+        "penalty",
+        "tax",
+        "income",
+        "allowance",
+        "computation"
+      ],
+      "chunk_preview": "SECTION 32 - TAX PROVISIONS This section deals with specific provisions of income tax law as per Section 32. (17) Tax computation and assessment proce..."
+    },
+    {
+      "chunk_id": "ita_enhanced_chunk_42",
+      "page": 19,
+      "length": 991,
+      "key_terms": [
+        "income tax",
+        "section",
+        "deduction",
+        "exemption",
+        "assessment",
+        "penalty",
+        "tax",
+        "income",
+        "allowance",
+        "computation"
+      ],
+      "chunk_preview": "SECTION 33 - TAX PROVISIONS This section deals with specific provisions of income tax law as per Section 33. (18) Tax computation and assessment proce..."
+    },
+    {
+      "chunk_id": "ita_enhanced_chunk_44",
+      "page": 20,
+      "length": 991,
+      "key_terms": [
+        "income tax",
+        "section",
+        "deduction",
+        "exemption",
+        "assessment",
+        "penalty",
+        "tax",
+        "income",
+        "allowance",
+        "computation"
+      ],
+      "chunk_preview": "SECTION 34 - TAX PROVISIONS This section deals with specific provisions of income tax law as per Section 34. (19) Tax computation and assessment proce..."
+    },
+    {
+      "chunk_id": "ita_enhanced_chunk_46",
+      "page": 21,
+      "length": 992,
+      "key_terms": [
+        "income tax",
+        "section",
+        "deduction",
+        "exemption",
+        "assessment",
+        "penalty",
+        "tax",
+        "income",
+        "allowance",
+        "computation"
+      ],
+      "chunk_preview": "SECTION 35 - TAX PROVISIONS This section deals with specific provisions of income tax law as per Section 35. (20) Tax computation and assessment proce..."
+    },
+    {
+      "chunk_id": "ita_enhanced_chunk_48",
+      "page": 22,
+      "length": 992,
+      "key_terms": [
+        "income tax",
+        "section",
+        "deduction",
+        "exemption",
+        "assessment",
+        "penalty",
+        "tax",
+        "income",
+        "allowance",
+        "computation"
+      ],
+      "chunk_preview": "SECTION 36 - TAX PROVISIONS This section deals with specific provisions of income tax law as per Section 36. (21) Tax computation and assessment proce..."
+    },
+    {
+      "chunk_id": "ita_enhanced_chunk_50",
+      "page": 23,
+      "length": 992,
+      "key_terms": [
+        "income tax",
+        "section",
+        "deduction",
+        "exemption",
+        "assessment",
+        "penalty",
+        "tax",
+        "income",
+        "allowance",
+        "computation"
+      ],
+      "chunk_preview": "SECTION 37 - TAX PROVISIONS This section deals with specific provisions of income tax law as per Section 37. (22) Tax computation and assessment proce..."
+    },
+    {
+      "chunk_id": "ita_enhanced_chunk_52",
+      "page": 24,
+      "length": 992,
+      "key_terms": [
+        "income tax",
+        "section",
+        "deduction",
+        "exemption",
+        "assessment",
+        "penalty",
+        "tax",
+        "income",
+        "allowance",
+        "computation"
+      ],
+      "chunk_preview": "SECTION 38 - TAX PROVISIONS This section deals with specific provisions of income tax law as per Section 38. (23) Tax computation and assessment proce..."
+    },
+    {
+      "chunk_id": "ita_enhanced_chunk_54",
+      "page": 25,
+      "length": 992,
+      "key_terms": [
+        "income tax",
+        "section",
+        "deduction",
+        "exemption",
+        "assessment",
+        "penalty",
+        "tax",
+        "income",
+        "allowance",
+        "computation"
+      ],
+      "chunk_preview": "SECTION 39 - TAX PROVISIONS This section deals with specific provisions of income tax law as per Section 39. (24) Tax computation and assessment proce..."
+    }
+  ]
+}
