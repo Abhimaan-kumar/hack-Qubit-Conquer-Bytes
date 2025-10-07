@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "TaxEase AI Assistant",
+  "version": "1.0",
+  "description": "AI Assistant for Indian Income Tax e-filing portal",
+  "permissions": [
+    "storage",
+    "scripting",
+    "activeTab",
+    "webNavigation"
+  ],
+  "host_permissions": [
+    "https://www.incometax.gov.in/*"
+  ],
+  "action": {
+    "default_popup": "index.html",
+    "default_title": "TaxEase AI Assistant"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.incometax.gov.in/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "icons": {
+    "16": "icon.svg",
+    "48": "icon.svg",
+    "128": "icon.svg"
+  }
+}

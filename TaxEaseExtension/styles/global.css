@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: 'Inter', 'Poppins', sans-serif;
+  background-color: #f8fafc;
+}
+
+.chrome-extension-popup {
+  width: 400px;
+  min-height: 500px;
+}
