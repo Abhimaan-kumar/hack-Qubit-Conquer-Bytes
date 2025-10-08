@@ -70,8 +70,8 @@ services:
       FLASK_PORT: 5555
       PYTHONUNBUFFERED: 1
     volumes:
-      - ./Backend/RAG_CHATBOT/vector_database:/app/vector_database:ro
-      - ./Backend/RAG_CHATBOT/document_metadata:/app/document_metadata:ro
+      - ./Backend/RAG_CHATBOT/vector_database:/app/vector_database
+      - ./Backend/RAG_CHATBOT/document_metadata:/app/document_metadata
     ports:
       - "5555:5555"
     networks:
@@ -80,8 +80,8 @@ services:
       test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5555/health')"]
       interval: 30s
       timeout: 10s
-      start_period: 60s
-      retries: 3
+      start_period: 180s  # 3 minutes for model download
+      retries: 5
 
   # Frontend Application
   frontend:

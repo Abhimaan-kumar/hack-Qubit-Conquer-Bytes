@@ -19,7 +19,7 @@ const aiQuerySchema = new mongoose.Schema({
   },
   response: {
     type: String,
-    required: [true, 'Response is required'],
+    required: false, // Response is added after AI processing
     maxlength: [4000, 'Response cannot exceed 4000 characters']
   },
   queryType: {

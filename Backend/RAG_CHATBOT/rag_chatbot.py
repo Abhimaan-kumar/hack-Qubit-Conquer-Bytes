@@ -262,8 +262,17 @@ class AdvancedRAGChatbot:
         return min(boost, 1.0)
     
     def generate_contextual_answer(self, query: str, relevant_chunks: List[Dict]) -> str:
-        """Generate answer from chunks"""
+        """Generate natural, conversational answer from chunks"""
         if not relevant_chunks:
+            return self.generate_fallback_answer(query)
+        
+        # Check if query is too vague or non-tax-related
+        if self.is_vague_query(query):
+            return self.generate_helpful_prompt(query)
+        
+        # Check if the best match is too low quality
+        best_similarity = relevant_chunks[0]['similarity']
+        if best_similarity < 0.4:
             return self.generate_fallback_answer(query)
         
         # Store in history
@@ -273,63 +282,120 @@ class AdvancedRAGChatbot:
             'chunks_used': len(relevant_chunks)
         })
         
-        # Create structured answer
-        answer_parts = []
-        sources = []
+        # Get the best matching chunk
+        best_chunk = relevant_chunks[0]
+        chunk_text = best_chunk['chunk'].strip()
         
-        for i, chunk_data in enumerate(relevant_chunks[:3], 1):  # Use top 3 chunks
-            chunk = chunk_data['chunk']
+        # Collect sources for reference
+        sources = []
+        for i, chunk_data in enumerate(relevant_chunks[:3], 1):
             metadata = chunk_data['metadata']
-            similarity = chunk_data['similarity']
-            
-            if i == 1:
-                answer_parts.append(f"**Answer:**\n\n{chunk}")
-            else:
-                answer_parts.append(f"\n**Additional Information:**\n\n{chunk}")
-            
-            page_info = metadata.get('page', 'N/A')
-            chunk_id = metadata.get('chunk_id', chunk_data['chunk_id'])
-            confidence = self.get_confidence_label(similarity)
-            
             sources.append({
                 'number': i,
-                'page': page_info,
-                'chunk_id': chunk_id,
-                'similarity': similarity,
-                'confidence': confidence
+                'page': metadata.get('page', 'N/A'),
+                'chunk_id': metadata.get('chunk_id', chunk_data['chunk_id']),
+                'similarity': chunk_data['similarity'],
+                'confidence': self.get_confidence_label(chunk_data['similarity'])
             })
         
-        answer = "\n".join(answer_parts)
+        # Generate natural answer based on query type
+        answer = self.format_natural_answer(query, chunk_text, relevant_chunks)
+        
+        # Add source attribution (minimal)
         source_attribution = self.format_sources(sources)
         
+        # Add confidence note only if low
         avg_similarity = sum(s['similarity'] for s in sources) / len(sources)
-        confidence_section = self.format_confidence(avg_similarity, len(relevant_chunks))
+        confidence_note = ""
+        if avg_similarity < 0.6:
+            confidence_note = f"\n\n⚠️ *Please verify with the complete Income Tax Act or consult a tax professional for accurate advice.*"
         
-        return f"{answer}\n\n{source_attribution}\n\n{confidence_section}"
+        return f"{answer}{source_attribution}{confidence_note}"
+    
+    def is_vague_query(self, query: str) -> bool:
+        """Check if query is too vague or non-tax-related"""
+        query_lower = query.lower().strip()
+        
+        # Check for greetings
+        greetings = ['hi', 'hello', 'hey', 'good morning', 'good evening', 'good afternoon']
+        if query_lower in greetings or len(query.split()) <= 1:
+            return True
+        
+        # Check for very generic phrases
+        generic_phrases = ['hello world', 'test', 'testing', 'thanks', 'thank you', 'ok', 'okay']
+        if query_lower in generic_phrases:
+            return True
+        
+        # Check if query has any tax-related keywords
+        tax_keywords = [
+            'tax', 'section', 'deduction', 'exemption', 'income', 'itr', 'filing',
+            'return', 'assessment', 'tds', 'hra', 'lta', 'salary', 'business',
+            'capital gains', 'investment', 'calculation', 'rate', 'regime',
+            'cess', 'surcharge', 'rebate', 'refund', 'notice', 'audit',
+            '80c', '80d', '10', '24', 'form 16', 'pan', 'aadhaar'
+        ]
+        
+        # If query is longer than 2 words and has no tax keywords, it's vague
+        if len(query.split()) > 2:
+            has_tax_keyword = any(keyword in query_lower for keyword in tax_keywords)
+            if not has_tax_keyword:
+                return True
+        
+        return False
+    
+    def generate_helpful_prompt(self, query: str) -> str:
+        """Generate helpful prompt for vague queries"""
+        return """Hello! I'm your Income Tax Assistant. I can help you with questions about:
+
+• Income Tax Sections (e.g., "What is Section 80C?")
+• Tax Deductions (e.g., "How to claim HRA exemption?")
+• Tax Calculations (e.g., "Calculate capital gains tax")
+• Filing Procedures (e.g., "How to file ITR online?")
+• Tax Regimes (e.g., "Compare old vs new tax regime")
+
+Please ask a specific tax-related question, and I'll provide you with information from the Income Tax Act."""
+    
+    def format_natural_answer(self, query: str, best_chunk: str, all_chunks: List[Dict]) -> str:
+        """Format answer in a natural, conversational way"""
+        query_lower = query.lower()
+        
+        # For very short/vague queries, give a brief response
+        if len(query.split()) <= 2:
+            # Just return the most relevant text without extra formatting
+            return best_chunk
+        
+        # For section-specific queries
+        if any(keyword in query_lower for keyword in ['section', 'what is', 'define', 'explain']):
+            return best_chunk
+        
+        # For "how to" queries - combine top 2 chunks
+        if any(keyword in query_lower for keyword in ['how to', 'how do', 'how can', 'process', 'procedure']):
+            combined_text = best_chunk
+            if len(all_chunks) > 1:
+                second_chunk = all_chunks[1]['chunk'].strip()
+                # Add second chunk if it's different and relevant
+                if second_chunk[:50] not in best_chunk:
+                    combined_text += f"\n\n{second_chunk}"
+            return combined_text
+        
+        # For calculation/rate queries
+        if any(keyword in query_lower for keyword in ['calculate', 'rate', 'percentage', 'amount', 'limit']):
+            return best_chunk
+        
+        # Default: return the best matching chunk
+        return best_chunk
     
     def generate_fallback_answer(self, query: str) -> str:
         """Generate fallback when no chunks found"""
-        return f"""I couldn't find specific information about "{query}" in the Income Tax Act documents.
+        return f"""I couldn't find specific information about "{query}" in the Income Tax Act.
 
-**Here's how I can help:**
+Try asking about:
+• Specific sections: "What is Section 80C?" or "Explain Section 10"
+• Deductions: "HRA exemption rules" or "80D deduction limit"
+• Procedures: "How to file ITR?" or "ITR filing deadline"
+• Calculations: "Calculate capital gains" or "Tax on salary income"
 
-💡 **Try rephrasing your question:**
-   - Use specific terms like "Section 80C", "deduction", "tax calculation"
-   - Ask about specific tax scenarios or provisions
-
-📚 **I can answer questions about:**
-   - Tax deductions and exemptions
-   - Income tax calculations
-   - Tax filing procedures
-   - Specific sections of Income Tax Act
-   - Tax regime comparisons
-
-🔍 **Example questions:**
-   - "What is Section 80C?"
-   - "How to calculate HRA exemption?"
-   - "What are the tax slabs for new regime?"
-
-Please try asking in a different way or be more specific about what you'd like to know."""
+Please ask a specific tax-related question."""
     
     def get_confidence_label(self, similarity: float) -> str:
         """Get confidence label"""
@@ -343,17 +409,26 @@ Please try asking in a different way or be more specific about what you'd like t
             return "Low"
     
     def format_sources(self, sources: List[Dict]) -> str:
-        """Format sources"""
-        source_lines = ["📚 **Sources & References:**"]
+        """Format sources in a minimal way"""
+        # Only show sources if there are multiple or if confidence is low
+        if len(sources) == 1 and sources[0]['similarity'] >= 0.6:
+            page = sources[0]['page']
+            if page != 'N/A':
+                return f"\n\n*Source: Income Tax Act, Page {page}*"
+            else:
+                return "\n\n*Source: Income Tax Act*"
         
+        # For multiple sources or low confidence, show more detail
+        source_lines = []
         for source in sources:
-            confidence_emoji = "🟢" if source['similarity'] >= 0.7 else "🟡" if source['similarity'] >= 0.5 else "🟠"
-            source_lines.append(
-                f"   {confidence_emoji} Source {source['number']}: Page {source['page']} "
-                f"(Relevance: {source['similarity']:.2f} - {source['confidence']})"
-            )
+            page = source['page']
+            if page != 'N/A':
+                source_lines.append(f"Page {page}")
         
-        return "\n".join(source_lines)
+        if source_lines:
+            return f"\n\n*Sources: Income Tax Act - {', '.join(source_lines)}*"
+        else:
+            return "\n\n*Source: Income Tax Act*"
     
     def format_confidence(self, avg_similarity: float, chunk_count: int) -> str:
         """Format confidence section"""
@@ -387,7 +462,7 @@ Please try asking in a different way or be more specific about what you'd like t
         
         answer = self.generate_contextual_answer(query, relevant_chunks)
         
-        return f"💡 **Answer:**\n\n{answer}"
+        return answer
     
     def add_conversation_context(self, query: str) -> str:
         """Add conversation context"""

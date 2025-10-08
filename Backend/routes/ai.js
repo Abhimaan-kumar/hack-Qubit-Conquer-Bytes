@@ -20,6 +20,14 @@ router.use(protect);
 router.post('/query', validateAIQuery, catchAsync(async (req, res, next) => {
   const { query, queryType, sessionId, context } = req.body;
 
+  console.log('📥 Received AI query:', {
+    user: req.user?.email || req.user?._id,
+    query: query.substring(0, 100),
+    queryType,
+    sessionId,
+    USE_RAG_CHATBOT
+  });
+
   // Create AI query record
   const aiQuery = await AIQuery.create({
     user: req.user._id,
@@ -37,10 +45,12 @@ router.post('/query', validateAIQuery, catchAsync(async (req, res, next) => {
     // Try to use RAG chatbot if enabled and available
     if (USE_RAG_CHATBOT) {
       try {
+        console.log('🤖 Attempting RAG query to:', RAG_SERVER_URL);
         aiResponse = await generateRAGResponse(query, context);
         console.log('✅ Used RAG Chatbot for response');
       } catch (ragError) {
         console.log('⚠️ RAG Chatbot unavailable, using fallback:', ragError.message);
+        console.error('RAG Error details:', ragError.response?.data || ragError);
         aiResponse = await generateAIResponse(query, queryType, context);
       }
     } else {
