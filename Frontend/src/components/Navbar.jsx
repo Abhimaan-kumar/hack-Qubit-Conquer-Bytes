@@ -54,7 +54,16 @@ const Navbar = ({ language, setLanguage }) => {
               <>
                 <span className="text-sm text-gray-600 hidden sm:inline">Signed in</span>
                 <button
-                  onClick={async () => { await apiClient.logout(); apiClient.setAuthToken(null); window.location.href = '/'; }}
+                  onClick={async () => { 
+                    try {
+                      await apiClient.logout();
+                    } catch (error) {
+                      console.log('Logout failed, clearing token anyway:', error.message);
+                    } finally {
+                      apiClient.setAuthToken(null); 
+                      window.location.href = '/';
+                    }
+                  }}
                   className="px-3 py-2 bg-gray-100 rounded-md text-sm hover:bg-gray-200"
                 >
                   {t.logout}

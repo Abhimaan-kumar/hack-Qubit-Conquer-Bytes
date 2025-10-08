@@ -10,8 +10,8 @@ import pickle
 from datetime import datetime
 from PyPDF2 import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.vectorstores import FAISS
+from langchain.embeddings import HuggingFaceEmbeddings
+from langchain.vectorstores import FAISS
 import numpy as np
 
 class DocumentVectorizer:

@@ -300,15 +300,149 @@ router.get('/search', catchAsync(async (req, res, next) => {
   });
 }));
 
-// RAG Chatbot response generator
+// @desc    Get RAG chatbot statistics
+// @route   GET /api/ai/rag/stats
+// @access  Private
+router.get('/rag/stats', catchAsync(async (req, res, next) => {
+  try {
+    if (!USE_RAG_CHATBOT) {
+      return res.status(400).json({
+        success: false,
+        message: 'RAG chatbot is disabled'
+      });
+    }
+
+    const response = await axios.get(`${RAG_SERVER_URL}/api/rag/stats`, {
+      timeout: 5000
+    });
+
+    res.status(200).json({
+      success: true,
+      data: response.data.data
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch RAG stats',
+      error: error.message
+    });
+  }
+}));
+
+// @desc    Get conversation summary from RAG
+// @route   GET /api/ai/conversation/summary
+// @access  Private
+router.get('/conversation/summary', catchAsync(async (req, res, next) => {
+  try {
+    if (!USE_RAG_CHATBOT) {
+      return res.status(400).json({
+        success: false,
+        message: 'RAG chatbot is disabled'
+      });
+    }
+
+    const response = await axios.get(`${RAG_SERVER_URL}/api/rag/conversation/summary`, {
+      timeout: 5000
+    });
+
+    res.status(200).json({
+      success: true,
+      data: response.data.data
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch conversation summary',
+      error: error.message
+    });
+  }
+}));
+
+// @desc    Clear RAG conversation history
+// @route   POST /api/ai/conversation/clear
+// @access  Private
+router.post('/conversation/clear', catchAsync(async (req, res, next) => {
+  try {
+    if (!USE_RAG_CHATBOT) {
+      return res.status(400).json({
+        success: false,
+        message: 'RAG chatbot is disabled'
+      });
+    }
+
+    const response = await axios.post(`${RAG_SERVER_URL}/api/rag/conversation/clear`, {}, {
+      timeout: 5000
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Conversation history cleared'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to clear conversation history',
+      error: error.message
+    });
+  }
+}));
+
+// @desc    Get question suggestions
+// @route   POST /api/ai/suggestions
+// @access  Private
+router.post('/suggestions', catchAsync(async (req, res, next) => {
+  const { query } = req.body;
+
+  try {
+    if (USE_RAG_CHATBOT) {
+      const response = await axios.post(`${RAG_SERVER_URL}/api/rag/suggest`, {
+        query
+      }, {
+        timeout: 5000
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: response.data.data.suggestions
+      });
+    }
+
+    // Fallback suggestions
+    const fallbackSuggestions = [
+      'What are the major tax deductions available?',
+      'How do I calculate my income tax?',
+      'What is the difference between old and new tax regime?',
+      'Can you explain Section 80C deductions?'
+    ];
+
+    res.status(200).json({
+      success: true,
+      data: fallbackSuggestions
+    });
+  } catch (error) {
+    // Return fallback on error
+    res.status(200).json({
+      success: true,
+      data: [
+        'What are the major tax deductions available?',
+        'How do I calculate my income tax?',
+        'What is the difference between old and new tax regime?',
+        'Can you explain Section 80C deductions?'
+      ]
+    });
+  }
+}));
+
+// RAG Chatbot response generator with enhanced features
 async function generateRAGResponse(query, context) {
   const startTime = Date.now();
 
   try {
     const response = await axios.post(`${RAG_SERVER_URL}/api/rag/query`, {
       query,
-      top_k: 5,
-      document_id: context?.document_id || 'ITA_primary'
+      top_k: context?.top_k || 5,
+      document_id: context?.document_id || 'ITA_primary',
+      use_context: context?.use_context !== false  // Default to true
     }, {
       timeout: 30000 // 30 second timeout
     });
@@ -328,15 +462,18 @@ async function generateRAGResponse(query, context) {
         completion: Math.floor(data.answer.length / 4),
         total: Math.floor((query.length + data.answer.length) / 4)
       },
-      processingTime,
+      processingTime: data.processing_time || processingTime / 1000,
       confidence: calculateConfidence(data.sources),
       sources: data.sources.map(source => ({
         type: 'income_tax_act',
         reference: `Page ${source.page}`,
         section: `Chunk ${source.chunk_id}`,
-        similarity: source.similarity
+        similarity: source.similarity,
+        base_similarity: source.base_similarity,
+        keyword_boost: source.keyword_boost
       })),
-      model: 'rag-faiss-chatbot'
+      model: 'rag-faiss-chatbot-v2',
+      conversation_context: data.conversation_context
     };
   } catch (error) {
     console.error('❌ RAG Server Error:', error.message);

@@ -9,12 +9,16 @@ const ChatAssistant = ({ language }) => {
     {
       id: 1,
       type: 'bot',
-      content: 'Hello! I\'m your AI Tax Assistant. I can help you with income tax calculations, deductions, and filing guidance. What would you like to know?',
-      timestamp: new Date()
+      content: '👋 Hello! I\'m your **Enhanced AI Tax Assistant** powered by the Income Tax Act knowledge base.\n\nI can help you with:\n💰 Tax calculations and deductions\n📊 Regime comparisons\n📄 Filing procedures\n📚 Specific sections of ITA\n\nWhat would you like to know?',
+      timestamp: new Date(),
+      confidence: 1.0
     }
   ])
   const [inputMessage, setInputMessage] = useState('')
   const [isTyping, setIsTyping] = useState(false)
+  const [suggestions, setSuggestions] = useState([])
+  const [showSuggestions, setShowSuggestions] = useState(true)
+  const [conversationStats, setConversationStats] = useState(null)
   const messagesEndRef = useRef(null)
   
   const scrollToBottom = () => {
@@ -25,6 +29,11 @@ const ChatAssistant = ({ language }) => {
     scrollToBottom()
   }, [messages])
   
+  useEffect(() => {
+    // Load initial suggestions
+    loadSuggestions('')
+  }, [])
+  
   const exampleQuestions = [
     'What deductions can I claim under Section 80C?',
     'Which tax regime is better for my salary?',
@@ -33,6 +42,29 @@ const ChatAssistant = ({ language }) => {
     'Can I claim HRA exemption?',
     'What are the tax slabs for this year?'
   ]
+  
+  const loadSuggestions = async (lastQuery) => {
+    try {
+      const response = await apiClient.post('/api/ai/suggestions', { query: lastQuery })
+      if (response.data && response.data.success) {
+        setSuggestions(response.data.data || [])
+      }
+    } catch (err) {
+      console.error('Failed to load suggestions:', err)
+      // Keep existing suggestions on error
+    }
+  }
+  
+  const loadConversationStats = async () => {
+    try {
+      const response = await apiClient.get('/api/ai/conversation/summary')
+      if (response.data && response.data.success) {
+        setConversationStats(response.data.data)
+      }
+    } catch (err) {
+      console.error('Failed to load conversation stats:', err)
+    }
+  }
   
   const generateBotResponse = (userMessage) => {
     const message = userMessage.toLowerCase()
@@ -162,31 +194,53 @@ Feel free to ask more specific questions about income tax!`
     setMessages(prev => [...prev, userMessage])
     setInputMessage('')
     setIsTyping(true)
+    setShowSuggestions(false)
     
     try {
-      // Call backend AI endpoint (fallback to local if backend fails)
+      // Call enhanced backend AI endpoint
       const sessionId = 'session_' + Date.now();
       const response = await apiClient.sendAIQuery({ 
         query: message, 
         queryType: 'general_tax_info', 
-        sessionId 
+        sessionId,
+        use_context: true  // Enable conversation context
       });
+      
+      const confidence = response?.data?.confidence || 0.8
+      const sources = response?.data?.sources || []
+      
+      let botContent = response?.data?.response || generateBotResponse(message)
+      
+      // Add confidence indicator if available
+      if (confidence < 0.7 && sources.length > 0) {
+        botContent += '\n\n⚠️ *This answer has moderate confidence. Please verify with official sources.*'
+      }
       
       const botResponse = {
         id: Date.now() + 1,
         type: 'bot',
-        content: response?.data?.response || generateBotResponse(message),
-        timestamp: new Date()
+        content: botContent,
+        timestamp: new Date(),
+        confidence: confidence,
+        sources: sources
       }
+      
       setMessages(prev => [...prev, botResponse])
+      
+      // Load new suggestions based on this query
+      await loadSuggestions(message)
+      await loadConversationStats()
+      setShowSuggestions(true)
+      
     } catch (err) {
       console.error('AI query error:', err)
       // Use local response as fallback
       const botResponse = {
         id: Date.now() + 1,
         type: 'bot',
-        content: generateBotResponse(message),
-        timestamp: new Date()
+        content: generateBotResponse(message) + '\n\n⚠️ *Using offline mode. For best results, ensure RAG server is running.*',
+        timestamp: new Date(),
+        confidence: 0.6
       }
       setMessages(prev => [...prev, botResponse])
     } finally {
@@ -219,7 +273,7 @@ Feel free to ask more specific questions about income tax!`
       
       <div className="bg-white rounded-xl shadow-lg overflow-hidden">
         {/* Chat Messages */}
-        <div className="h-96 overflow-y-auto p-6 space-y-4 bg-gray-50">
+        <div className="h-[500px] overflow-y-auto p-6 space-y-4 bg-gray-50">
           {messages.map((message) => (
             <div
               key={message.id}
@@ -228,7 +282,7 @@ Feel free to ask more specific questions about income tax!`
               <div className={`flex items-start space-x-3 max-w-3xl ${
                 message.type === 'user' ? 'flex-row-reverse space-x-reverse' : ''
               }`}>
-                <div className={`p-2 rounded-full ${
+                <div className={`p-2 rounded-full flex-shrink-0 ${
                   message.type === 'user' 
                     ? 'bg-blue-600' 
                     : 'bg-gradient-to-r from-purple-500 to-indigo-600'
@@ -244,7 +298,39 @@ Feel free to ask more specific questions about income tax!`
                     ? 'bg-blue-600 text-white rounded-br-md'
                     : 'bg-white text-gray-800 rounded-bl-md shadow-md'
                 }`}>
-                  <div className="whitespace-pre-wrap">{message.content}</div>
+                  <div className="whitespace-pre-wrap prose prose-sm max-w-none">{message.content}</div>
+                  
+                  {/* Confidence indicator for bot messages */}
+                  {message.type === 'bot' && message.confidence && (
+                    <div className="mt-3 pt-3 border-t border-gray-200">
+                      <div className="flex items-center space-x-2 text-xs">
+                        <span className="text-gray-600">Confidence:</span>
+                        <div className="flex-1 bg-gray-200 rounded-full h-2 max-w-[100px]">
+                          <div 
+                            className={`h-2 rounded-full ${
+                              message.confidence >= 0.8 ? 'bg-green-500' :
+                              message.confidence >= 0.6 ? 'bg-yellow-500' : 'bg-orange-500'
+                            }`}
+                            style={{ width: `${message.confidence * 100}%` }}
+                          />
+                        </div>
+                        <span className={`font-medium ${
+                          message.confidence >= 0.8 ? 'text-green-600' :
+                          message.confidence >= 0.6 ? 'text-yellow-600' : 'text-orange-600'
+                        }`}>
+                          {(message.confidence * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                      
+                      {/* Sources indicator */}
+                      {message.sources && message.sources.length > 0 && (
+                        <div className="mt-2 text-xs text-gray-500">
+                          📚 {message.sources.length} source{message.sources.length > 1 ? 's' : ''} from Income Tax Act
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
                   <div className={`text-xs mt-2 ${
                     message.type === 'user' ? 'text-blue-100' : 'text-gray-500'
                   }`}>
@@ -302,22 +388,79 @@ Feel free to ask more specific questions about income tax!`
       
       {/* Example Questions */}
       <div className="mt-8 bg-white rounded-xl shadow-lg p-6">
-        <div className="flex items-center mb-4">
-          <Lightbulb className="h-6 w-6 text-yellow-500 mr-2" />
-          <h3 className="text-lg font-semibold text-gray-800">
-            {t.exampleQuestions}
-          </h3>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center">
+            <Lightbulb className="h-6 w-6 text-yellow-500 mr-2" />
+            <h3 className="text-lg font-semibold text-gray-800">
+              {showSuggestions && suggestions.length > 0 ? 'Smart Suggestions' : t.exampleQuestions}
+            </h3>
+          </div>
+          {conversationStats && conversationStats.total_queries > 0 && (
+            <div className="text-sm text-gray-500">
+              💬 {conversationStats.total_queries} questions asked
+            </div>
+          )}
         </div>
         <div className="grid md:grid-cols-2 gap-3">
-          {exampleQuestions.map((question, index) => (
+          {(showSuggestions && suggestions.length > 0 ? suggestions : exampleQuestions).map((question, index) => (
             <button
               key={index}
               onClick={() => handleSendMessage(question)}
-              className="text-left p-3 bg-gray-50 hover:bg-blue-50 rounded-lg transition-colors duration-200 text-sm text-gray-700 hover:text-blue-700"
+              disabled={isTyping}
+              className="text-left p-3 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 rounded-lg transition-all duration-200 text-sm text-gray-700 hover:text-blue-700 border border-blue-100 hover:border-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {question}
+              <div className="flex items-start space-x-2">
+                <HelpCircle className="h-4 w-4 mt-0.5 flex-shrink-0 text-blue-500" />
+                <span>{question}</span>
+              </div>
             </button>
           ))}
+        </div>
+        
+        {/* Conversation statistics */}
+        {conversationStats && conversationStats.total_queries > 0 && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="flex items-center justify-between text-sm text-gray-600">
+              <span>Avg. sources per answer: {conversationStats.avg_chunks_used?.toFixed(1) || 'N/A'}</span>
+              <button
+                onClick={async () => {
+                  try {
+                    await apiClient.post('/api/ai/conversation/clear')
+                    setMessages([{
+                      id: Date.now(),
+                      type: 'bot',
+                      content: '🔄 Conversation history cleared. How can I help you?',
+                      timestamp: new Date()
+                    }])
+                    setConversationStats(null)
+                    setSuggestions([])
+                    setShowSuggestions(true)
+                  } catch (err) {
+                    console.error('Failed to clear conversation:', err)
+                  }
+                }}
+                className="text-blue-600 hover:text-blue-700 font-medium"
+              >
+                Clear History
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {/* Tips section */}
+      <div className="mt-6 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-6 border border-purple-100">
+        <div className="flex items-start space-x-3">
+          <Info className="h-6 w-6 text-purple-600 flex-shrink-0 mt-1" />
+          <div>
+            <h4 className="font-semibold text-gray-800 mb-2">💡 Tips for Better Results:</h4>
+            <ul className="space-y-1 text-sm text-gray-700">
+              <li>• Be specific with section numbers (e.g., "Section 80C")</li>
+              <li>• Ask about particular scenarios for detailed answers</li>
+              <li>• Use follow-up questions to dig deeper into topics</li>
+              <li>• Answers are based on the Income Tax Act 1961</li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>
