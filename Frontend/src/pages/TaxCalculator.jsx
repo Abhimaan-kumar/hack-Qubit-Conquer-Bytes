@@ -8,6 +8,8 @@ import { translations } from '../data/translations'
 import { compareTaxRegimes, formatCurrency, validatePAN } from '../utils/taxCalculations'
 import apiClient from '../utils/api'
 import CalculatorGuide from '../components/CalculatorGuide'
+import TaxBreakdown from '../components/TaxBreakdown'
+import RebateExplainerTooltip from '../components/RebateExplainerTooltip'
 
 const taxFormSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -100,25 +102,50 @@ const TaxCalculator = ({ language }) => {
         const enhancedRes = await apiClient.compareEnhancedRegimes(payload)
         if (enhancedRes?.success && enhancedRes?.data) {
           const r = enhancedRes.data
+          
+          // Calculate safe savings percentage
+          const maxTax = Math.max(r.oldRegime.finalTaxPayable || 0, r.newRegime.finalTaxPayable || 0)
+          const savingsPercentage = maxTax > 0 ? ((r.savings / maxTax) * 100).toFixed(2) : 0
+          
           setResults({
+            // Input Summary
+            grossIncome: r.grossIncome || data.grossSalary,
+            totalDeductions: r.totalDeductions || (data.section80C + data.section80D + data.homeLoanInterest + data.otherDeductions),
+            
+            // Comparison Summary
             recommended: r.recommendedRegime,
             savings: r.savings,
-            savingsPercentage: ((r.savings / Math.max(r.oldRegime.totalTax, r.newRegime.totalTax)) * 100).toFixed(2),
+            savingsPercentage: savingsPercentage,
             rebateMessage: r.rebateMessage,
+            
+            // Old Regime Details
             oldRegime: {
-              taxableIncome: r.oldRegime.taxableIncome,
-              tax: r.oldRegime.tax,
-              cess: r.oldRegime.cess,
-              totalTax: r.oldRegime.totalTax
+              taxableIncome: r.oldRegime.taxableIncome || 0,
+              tax: r.oldRegime.tax || 0,
+              cess: r.oldRegime.cess || 0,
+              taxBeforeRebate: r.oldRegime.taxBeforeRebate || r.oldRegime.totalTaxBeforeRebate || r.oldRegime.totalTax || 0,
+              totalTax: r.oldRegime.totalTax || r.oldRegime.taxBeforeRebate || 0,
+              totalTaxBeforeRebate: r.oldRegime.totalTaxBeforeRebate || r.oldRegime.taxBeforeRebate || r.oldRegime.totalTax || 0,
+              rebate87A: r.oldRegime.rebate87A || 0,
+              qualifiesForRebate: r.oldRegime.qualifiesForRebate || false,
+              rebateThreshold: r.oldRegime.rebateThreshold || 500000,
+              rebateCap: r.oldRegime.rebateCap || 12500,
+              finalTaxPayable: r.oldRegime.finalTaxPayable || 0
             },
+            
+            // New Regime Details
             newRegime: {
-              taxableIncome: r.newRegime.taxableIncome,
-              tax: r.newRegime.tax,
-              cess: r.newRegime.cess,
-              totalTax: r.newRegime.totalTax,
-              totalTaxBeforeRebate: r.newRegime.totalTaxBeforeRebate,
-              rebate87A: r.newRegime.rebate87A,
-              qualifiesForRebate: r.newRegime.qualifiesForRebate
+              taxableIncome: r.newRegime.taxableIncome || 0,
+              tax: r.newRegime.tax || 0,
+              cess: r.newRegime.cess || 0,
+              taxBeforeRebate: r.newRegime.taxBeforeRebate || r.newRegime.totalTaxBeforeRebate || r.newRegime.totalTax || 0,
+              totalTax: r.newRegime.totalTax || r.newRegime.taxBeforeRebate || 0,
+              totalTaxBeforeRebate: r.newRegime.totalTaxBeforeRebate || r.newRegime.taxBeforeRebate || r.newRegime.totalTax || 0,
+              rebate87A: r.newRegime.rebate87A || 0,
+              qualifiesForRebate: r.newRegime.qualifiesForRebate || false,
+              rebateThreshold: r.newRegime.rebateThreshold || 700000,
+              rebateCap: r.newRegime.rebateCap || null,
+              finalTaxPayable: r.newRegime.finalTaxPayable || 0
             }
           })
           toast.success('Tax calculation completed with enhanced engine!')
@@ -414,6 +441,76 @@ const TaxCalculator = ({ language }) => {
                 )}
               </div>
               
+              {/* Combined Zero Tax Banner - When Both Regimes Result in ₹0 Tax */}
+              {results.bothRegimesZeroTax && results.combinedRebateMessage && (
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl shadow-lg p-6 border-2 border-green-300">
+                  <div className="flex items-start space-x-3">
+                    <span className="text-3xl">🎉</span>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-green-800 mb-2">
+                        Excellent News! Zero Tax Liability
+                      </h3>
+                      <p className="text-green-700 mb-3">
+                        {results.combinedRebateMessage}
+                      </p>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div className="bg-white p-3 rounded-lg border border-green-200">
+                          <p className="text-gray-600 text-xs mb-1">Old Regime Rebate</p>
+                          <p className="text-green-700 font-bold">₹{results.oldRegime.rebate87A?.toLocaleString() || 0}</p>
+                          <p className="text-xs text-gray-500 mt-1">{results.oldRegime.rebateReason || "Taxable ≤ ₹5L"}</p>
+                        </div>
+                        <div className="bg-white p-3 rounded-lg border border-green-200">
+                          <p className="text-gray-600 text-xs mb-1">New Regime Rebate</p>
+                          <p className="text-green-700 font-bold">₹{results.newRegime.rebate87A?.toLocaleString() || 0}</p>
+                          <p className="text-xs text-gray-500 mt-1">{results.newRegime.rebateReason || "Taxable ≤ ₹7L"}</p>
+                        </div>
+                      </div>
+                      <div className="mt-3 p-2 bg-blue-50 rounded-lg border border-blue-200">
+                        <p className="text-xs text-blue-800">
+                          💡 <strong>Recommendation:</strong> Choose New Regime for simpler compliance and higher rebate ceiling.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Income & Deduction Summary Card */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl shadow-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                  <Calculator className="h-5 w-5 mr-2 text-blue-600" />
+                  Income & Deductions Summary
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-700 font-medium">Gross Income:</span>
+                    <span className="text-xl font-bold text-blue-600">
+                      {formatCurrency(results.grossIncome || 0)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-700 font-medium">Total Deductions:</span>
+                    <span className="text-xl font-bold text-green-600">
+                      -{formatCurrency(results.totalDeductions || 0)}
+                    </span>
+                  </div>
+                  <div className="border-t border-gray-300 pt-3 mt-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-800 font-semibold">Taxable Income (Old):</span>
+                      <span className="text-xl font-bold text-gray-800">
+                        {formatCurrency(results.oldRegime?.taxableIncome || 0)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center mt-2">
+                      <span className="text-gray-800 font-semibold">Taxable Income (New):</span>
+                      <span className="text-xl font-bold text-gray-800">
+                        {formatCurrency(results.newRegime?.taxableIncome || 0)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
               {/* Comparison Cards */}
               <div className="grid md:grid-cols-2 gap-6">
                 {/* Old Regime */}
@@ -435,12 +532,55 @@ const TaxCalculator = ({ language }) => {
                       <span className="text-gray-600">Cess (4%):</span>
                       <span className="font-semibold">{formatCurrency(results.oldRegime.cess)}</span>
                     </div>
-                    <div className="border-t pt-2">
-                      <div className="flex justify-between text-lg">
-                        <span className="font-semibold">Total Tax:</span>
-                        <span className="font-bold text-blue-600">{formatCurrency(results.oldRegime.totalTax)}</span>
+                    <div className="border-t pt-2 mt-2">
+                      <div className="flex justify-between text-base">
+                        <span className="font-semibold text-gray-700">Tax Before Rebate:</span>
+                        <span className="font-bold text-gray-900">{formatCurrency(results.oldRegime.taxBeforeRebate || results.oldRegime.totalTax)}</span>
                       </div>
                     </div>
+                    {results.oldRegime.rebate87A > 0 && (
+                      <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-sm font-semibold text-blue-800 flex items-center">
+                            Section 87A Rebate:
+                            <RebateExplainerTooltip 
+                              regime="old"
+                              taxableIncome={results.oldRegime.taxableIncome}
+                              taxBeforeRebate={results.oldRegime.taxBeforeRebate || results.oldRegime.totalTax}
+                              rebate={results.oldRegime.rebate87A}
+                              threshold={500000}
+                            />
+                          </span>
+                          <span className="text-base font-bold text-green-600">-{formatCurrency(results.oldRegime.rebate87A)}</span>
+                        </div>
+                        <p className="text-xs text-blue-700">
+                          {results.oldRegime.rebateReason || "Taxable ≤ ₹5L (capped at ₹12,500)"}
+                        </p>
+                      </div>
+                    )}
+                    <div className="border-t pt-2 mt-2">
+                      <div className="flex justify-between text-lg">
+                        <span className="font-bold text-blue-800">Final Tax Payable:</span>
+                        <span className={`font-bold ${results.oldRegime.finalTaxPayable === 0 ? "text-green-600" : "text-blue-600"}`}>
+                          {formatCurrency(results.oldRegime.finalTaxPayable)}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Show celebration only when final tax is zero */}
+                    {results.oldRegime.finalTaxPayable === 0 && results.oldRegime.rebate87A > 0 && (
+                      <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xl">🎉</span>
+                          <div>
+                            <p className="text-sm font-semibold text-green-800">No Tax Payable!</p>
+                            <p className="text-xs text-green-700">
+                              {results.oldRegime.rebateMessage || `₹${results.oldRegime.rebate87A.toLocaleString()} rebate — tax fully covered`}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
                 
@@ -463,34 +603,50 @@ const TaxCalculator = ({ language }) => {
                       <span className="text-gray-600">Cess (4%):</span>
                       <span className="font-semibold">{formatCurrency(results.newRegime.cess)}</span>
                     </div>
-                    {results.newRegime.totalTaxBeforeRebate > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Tax Before Rebate:</span>
-                        <span className="font-semibold">{formatCurrency(results.newRegime.totalTaxBeforeRebate)}</span>
+                    <div className="border-t pt-2 mt-2">
+                      <div className="flex justify-between text-base">
+                        <span className="font-semibold text-gray-700">Tax Before Rebate:</span>
+                        <span className="font-bold text-gray-900">{formatCurrency(results.newRegime.taxBeforeRebate || results.newRegime.totalTax)}</span>
                       </div>
-                    )}
+                    </div>
                     {results.newRegime.rebate87A > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Section 87A Rebate:</span>
-                        <span className="font-semibold text-green-600">-{formatCurrency(results.newRegime.rebate87A)}</span>
+                      <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-sm font-semibold text-green-800 flex items-center">
+                            Section 87A Rebate:
+                            <RebateExplainerTooltip 
+                              regime="new"
+                              taxableIncome={results.newRegime.taxableIncome}
+                              taxBeforeRebate={results.newRegime.taxBeforeRebate || results.newRegime.totalTax}
+                              rebate={results.newRegime.rebate87A}
+                              threshold={700000}
+                            />
+                          </span>
+                          <span className="text-base font-bold text-green-600">-{formatCurrency(results.newRegime.rebate87A)}</span>
+                        </div>
+                        <p className="text-xs text-green-700">
+                          {results.newRegime.rebateReason || "Taxable ≤ ₹7L (full rebate, no cap)"}
+                        </p>
                       </div>
                     )}
-                    <div className="border-t pt-2">
+                    <div className="border-t pt-2 mt-2">
                       <div className="flex justify-between text-lg">
-                        <span className="font-semibold">Final Tax:</span>
-                        <span className="font-bold text-green-600">{formatCurrency(results.newRegime.totalTax)}</span>
+                        <span className="font-bold text-green-800">Final Tax Payable:</span>
+                        <span className={`font-bold ${results.newRegime.finalTaxPayable === 0 ? "text-green-600" : "text-green-700"}`}>
+                          {formatCurrency(results.newRegime.finalTaxPayable)}
+                        </span>
                       </div>
                     </div>
                     
-                    {/* Rebate Qualification Message */}
-                    {results.newRegime.qualifiesForRebate && (
-                      <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    {/* Show celebration only when final tax is zero */}
+                    {results.newRegime.finalTaxPayable === 0 && results.newRegime.rebate87A > 0 && (
+                      <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
                         <div className="flex items-center space-x-2">
                           <span className="text-xl">🎉</span>
                           <div>
-                            <p className="text-sm font-semibold text-green-800">Section 87A Rebate Applied!</p>
+                            <p className="text-sm font-semibold text-green-800">No Tax Payable!</p>
                             <p className="text-xs text-green-700">
-                              Full rebate available since taxable income ≤ ₹7,00,000
+                              {results.newRegime.rebateMessage || `₹${results.newRegime.rebate87A.toLocaleString()} rebate — tax fully covered`}
                             </p>
                           </div>
                         </div>
@@ -499,6 +655,9 @@ const TaxCalculator = ({ language }) => {
                   </div>
                 </div>
               </div>
+              
+              {/* Detailed Tax Breakdown - NEW FEATURE */}
+              <TaxBreakdown data={results} regime={results.recommendedRegime || results.recommended} />
             </>
           ) : (
             <div className="bg-white rounded-xl shadow-lg p-8 text-center">

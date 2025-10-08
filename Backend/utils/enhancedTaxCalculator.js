@@ -2,8 +2,25 @@
 // Computes Indian Income Tax for FY 2024-25 (AY 2025-26)
 // Handles Old/New regime, Section 87A rebate, Capital Gains, ITR selection
 
+/**
+ * Round to 2 decimal places and ensure non-negative
+ * @param {number} x - Number to round
+ * @returns {number} - Rounded number (never negative)
+ */
 function round2(x) { 
-  return Math.round(x); 
+  const rounded = Math.round((x || 0) * 100) / 100;
+  return Math.max(0, rounded); 
+}
+
+/**
+ * Safe percentage calculation to avoid NaN
+ * @param {number} numerator - Top value
+ * @param {number} denominator - Bottom value
+ * @returns {number} - Percentage (0-100)
+ */
+function safePercentage(numerator, denominator) {
+  if (!denominator || denominator <= 0) return 0;
+  return Math.round((Math.abs(numerator) / denominator) * 100);
 }
 
 // Slab calculation helper
@@ -137,16 +154,20 @@ function computeTax(payload) {
   const oldSlabResult = slabTax(taxableOld, oldSlabs);
   const taxOldBeforeCess = oldSlabResult.tax + capitalGainsTaxTotal;
   const cessOld = taxOldBeforeCess * 0.04;
-  const taxOldTotal = taxOldBeforeCess + cessOld;
+  const taxOldBeforeRebate = taxOldBeforeCess + cessOld;
   
-  // Section 87A rebate for old regime
+  // Section 87A rebate for old regime (₹5L threshold, ₹12.5K cap)
   let rebateOld = 0;
   let qualifiesForRebateOld = false;
-  if (taxableOld <= 700000) {
-    rebateOld = Math.min(25000, taxOldTotal);
+  let rebateReasonOld = "";
+  if (taxableOld <= 500000) {
     qualifiesForRebateOld = true;
+    rebateOld = Math.min(12500, taxOldBeforeRebate);
+    rebateReasonOld = "Taxable ≤ ₹5L — rebate applied (capped at ₹12,500)";
+  } else {
+    rebateReasonOld = "Not eligible — Taxable income exceeds ₹5L threshold";
   }
-  const finalOld = Math.max(0, taxOldTotal - rebateOld);
+  const finalOld = Math.max(0, taxOldBeforeRebate - rebateOld);
 
   // NEW REGIME CALCULATION
   const newDeductions = standardDeduction + employerNPS + savingsExempt;
@@ -154,8 +175,8 @@ function computeTax(payload) {
   
   const newSlabs = [
     { upTo: 300000, rate: 0 },
-    { upTo: 600000, rate: 0.05 },
-    { upTo: 900000, rate: 0.10 },
+    { upTo: 700000, rate: 0.05 },
+    { upTo: 1000000, rate: 0.10 },
     { upTo: 1200000, rate: 0.15 },
     { upTo: 1500000, rate: 0.20 },
     { upTo: Infinity, rate: 0.30 }
@@ -164,16 +185,20 @@ function computeTax(payload) {
   const newSlabResult = slabTax(taxableNew, newSlabs);
   const taxNewBeforeCess = newSlabResult.tax + capitalGainsTaxTotal;
   const cessNew = taxNewBeforeCess * 0.04;
-  const taxNewTotal = taxNewBeforeCess + cessNew;
+  const taxNewBeforeRebate = taxNewBeforeCess + cessNew;
   
-  // Section 87A rebate for new regime
+  // Section 87A rebate for new regime (₹7L threshold, full tax rebate)
   let rebateNew = 0;
   let qualifiesForRebateNew = false;
+  let rebateReasonNew = "";
   if (taxableNew <= 700000) {
-    rebateNew = Math.min(25000, taxNewTotal);
     qualifiesForRebateNew = true;
+    rebateNew = taxNewBeforeRebate; // Full rebate (no cap in new regime)
+    rebateReasonNew = "Taxable ≤ ₹7L — full rebate applied (no cap)";
+  } else {
+    rebateReasonNew = "Not eligible — Taxable income exceeds ₹7L threshold";
   }
-  const finalNew = Math.max(0, taxNewTotal - rebateNew);
+  const finalNew = Math.max(0, taxNewBeforeRebate - rebateNew);
 
   // ITR form recommendation
   const hasCapitalGains = (capitalGains && capitalGains.length > 0);
@@ -182,17 +207,39 @@ function computeTax(payload) {
   // Recommendation
   const savings = finalOld - finalNew;
   const recommended = savings > 0 ? 'new' : 'old';
-  const savingsPercentage = finalOld > 0 ? Math.round((Math.abs(savings) / finalOld) * 100) : 0;
+  const savingsPercentage = safePercentage(savings, finalOld);
+
+  // Generate regime-specific rebate messages
+  let rebateMessageOld = null;
+  let rebateMessageNew = null;
+  let combinedRebateMessage = null;
+
+  if (qualifiesForRebateOld && rebateOld > 0) {
+    rebateMessageOld = finalOld === 0 
+      ? `₹${round2(rebateOld).toLocaleString()} rebate applied — tax fully covered`
+      : `₹${round2(rebateOld).toLocaleString()} rebate applied (capped at ₹12,500)`;
+  }
+
+  if (qualifiesForRebateNew && rebateNew > 0) {
+    rebateMessageNew = finalNew === 0
+      ? `₹${round2(rebateNew).toLocaleString()} rebate applied — tax fully covered`
+      : `₹${round2(rebateNew).toLocaleString()} rebate applied`;
+  }
+
+  // Combined message when both regimes result in zero tax
+  if (finalOld === 0 && finalNew === 0 && rebateOld > 0 && rebateNew > 0) {
+    combinedRebateMessage = `✅ You pay ₹0 tax under both regimes — Section 87A rebate applied (Old: ₹${round2(rebateOld).toLocaleString()}, New: ₹${round2(rebateNew).toLocaleString()})`;
+  }
 
   return {
     inputs: {
-      grossSalary,
-      standardDeduction,
-      chapter6ADeductions,
-      otherDeductions,
-      employerNPS,
-      interestSavings,
-      interestFD,
+      grossSalary: round2(grossSalary),
+      standardDeduction: round2(standardDeduction),
+      chapter6ADeductions: round2(chapter6ADeductions),
+      otherDeductions: round2(otherDeductions),
+      employerNPS: round2(employerNPS),
+      interestSavings: round2(interestSavings),
+      interestFD: round2(interestFD),
       isSenior,
       capitalGains
     },
@@ -212,10 +259,14 @@ function computeTax(payload) {
       capitalGainsTax: round2(capitalGainsTaxTotal),
       taxBeforeCess: round2(taxOldBeforeCess),
       cess: round2(cessOld),
-      taxTotal: round2(taxOldTotal),
+      taxBeforeRebate: round2(taxOldBeforeRebate),
       rebate: round2(rebateOld),
       qualifiesForRebate: qualifiesForRebateOld,
-      finalTaxPayable: round2(finalOld)
+      rebateThreshold: 500000,
+      rebateCap: 12500,
+      rebateReason: rebateReasonOld,
+      finalTaxPayable: round2(finalOld),
+      rebateMessage: rebateMessageOld
     },
     newRegime: {
       deductionsUsed: round2(newDeductions),
@@ -224,18 +275,21 @@ function computeTax(payload) {
       capitalGainsTax: round2(capitalGainsTaxTotal),
       taxBeforeCess: round2(taxNewBeforeCess),
       cess: round2(cessNew),
-      taxTotal: round2(taxNewTotal),
+      taxBeforeRebate: round2(taxNewBeforeRebate),
       rebate: round2(rebateNew),
       qualifiesForRebate: qualifiesForRebateNew,
-      finalTaxPayable: round2(finalNew)
+      rebateThreshold: 700000,
+      rebateCap: null, // No cap in new regime
+      rebateReason: rebateReasonNew,
+      finalTaxPayable: round2(finalNew),
+      rebateMessage: rebateMessageNew
     },
     comparison: {
       savings: round2(Math.abs(savings)),
       recommended,
       savingsPercentage,
-      rebateMessage: (qualifiesForRebateNew && recommended === 'new') 
-        ? `🎉 New Regime: Section 87A rebate reduces tax from ₹${taxNewTotal.toLocaleString()} to ₹${finalNew.toLocaleString()}`
-        : null
+      combinedRebateMessage,
+      bothRegimesZeroTax: finalOld === 0 && finalNew === 0
     },
     itrForm,
     metadata: {
@@ -273,4 +327,4 @@ function validateTaxInput(payload) {
 }
 
 // Export functions
-export { computeTax, validateTaxInput };
+export { computeTax, validateTaxInput, round2, safePercentage, slabTax };

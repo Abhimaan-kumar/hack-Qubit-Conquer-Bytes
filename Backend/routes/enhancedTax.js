@@ -2,6 +2,8 @@ import express from 'express';
 import { protect } from '../middleware/auth.js';
 import { catchAsync } from '../middleware/errorHandler.js';
 import { computeTax, validateTaxInput } from '../utils/enhancedTaxCalculator.js';
+import { generateDeductionSuggestions, getInvestmentDeadlines } from '../utils/deductionSuggestions.js';
+import { crossFieldValidation, validatePAN, checkDocumentConsistency } from '../utils/advancedValidation.js';
 
 const router = express.Router();
 
@@ -66,29 +68,64 @@ router.post('/compare-regimes', catchAsync(async (req, res, next) => {
 
   const result = computeTax(payload);
 
-  // Simplified response for quick comparison
+  // Enhanced response with full transparency
   res.status(200).json({
     success: true,
     data: {
-      taxableIncome: {
-        old: result.taxable.taxableOld,
-        new: result.taxable.taxableNew
-      },
-      finalTax: {
-        old: result.oldRegime.finalTaxPayable,
-        new: result.newRegime.finalTaxPayable
-      },
+      // Summary
+      recommendedRegime: result.comparison.recommended,
       savings: result.comparison.savings,
-      recommended: result.comparison.recommended,
       savingsPercentage: result.comparison.savingsPercentage,
-      rebateApplied: {
-        old: result.oldRegime.rebate,
-        new: result.newRegime.rebate,
-        qualifiesOld: result.oldRegime.qualifiesForRebate,
-        qualifiesNew: result.newRegime.qualifiesForRebate
-      },
+      rebateMessage: result.comparison.rebateMessage,
       itrForm: result.itrForm,
-      rebateMessage: result.comparison.rebateMessage
+      
+      // Income & Deduction Summary
+      grossIncome: payload.grossSalary,
+      totalDeductions: payload.chapter6ADeductions + payload.otherDeductions + payload.employerNPS,
+      
+      // Old Regime - Full Breakdown
+      oldRegime: {
+        taxableIncome: result.taxable.taxableOld,
+        deductionsUsed: result.oldRegime.deductionsUsed,
+        slabTax: result.oldRegime.slabTax,
+        slabBreakdown: result.oldRegime.slabBreakdown,
+        capitalGainsTax: result.oldRegime.capitalGainsTax,
+        tax: result.oldRegime.taxBeforeCess,
+        cess: result.oldRegime.cess,
+        taxBeforeRebate: result.oldRegime.taxBeforeRebate,
+        totalTax: result.oldRegime.taxBeforeRebate, // For backward compatibility
+        rebate87A: result.oldRegime.rebate,
+        qualifiesForRebate: result.oldRegime.qualifiesForRebate,
+        rebateThreshold: result.oldRegime.rebateThreshold,
+        rebateCap: result.oldRegime.rebateCap,
+        totalTaxBeforeRebate: result.oldRegime.taxBeforeRebate,
+        finalTaxPayable: result.oldRegime.finalTaxPayable
+      },
+      
+      // New Regime - Full Breakdown
+      newRegime: {
+        taxableIncome: result.taxable.taxableNew,
+        deductionsUsed: result.newRegime.deductionsUsed,
+        slabTax: result.newRegime.slabTax,
+        slabBreakdown: result.newRegime.slabBreakdown,
+        capitalGainsTax: result.newRegime.capitalGainsTax,
+        tax: result.newRegime.taxBeforeCess,
+        cess: result.newRegime.cess,
+        taxBeforeRebate: result.newRegime.taxBeforeRebate,
+        totalTax: result.newRegime.taxBeforeRebate, // For backward compatibility
+        rebate87A: result.newRegime.rebate,
+        qualifiesForRebate: result.newRegime.qualifiesForRebate,
+        rebateThreshold: result.newRegime.rebateThreshold,
+        rebateCap: result.newRegime.rebateCap,
+        totalTaxBeforeRebate: result.newRegime.taxBeforeRebate,
+        finalTaxPayable: result.newRegime.finalTaxPayable
+      },
+      
+      // Input Summary
+      inputs: result.inputs,
+      
+      // Capital Gains Detail
+      capitalGains: result.capitalGains
     }
   });
 }));
@@ -133,72 +170,86 @@ router.post('/from-form16', catchAsync(async (req, res, next) => {
 // @route   POST /api/enhanced-tax/suggestions
 // @access  Public
 router.post('/suggestions', catchAsync(async (req, res, next) => {
-  const { grossSalary, currentDeductions = {} } = req.body;
+  const { 
+    grossSalary, 
+    currentDeductions = {},
+    age,
+    hasHealthInsurance,
+    hasHomeLoan,
+    isRenting,
+    cityType,
+    hasParents,
+    parentsAge
+  } = req.body;
 
-  const suggestions = [];
-
-  // Section 80C suggestion
-  const current80C = currentDeductions.section80c || 0;
-  if (current80C < 150000) {
-    const potential80C = Math.min(150000, grossSalary * 0.15); // Suggest up to 15% of salary
-    const potentialSaving = (potential80C - current80C) * 0.30; // Assuming 30% tax bracket
-
-    suggestions.push({
-      section: '80C',
-      title: 'Section 80C Investments',
-      description: 'PPF, ELSS, Life Insurance, Home Loan Principal',
-      currentAmount: current80C,
-      suggestedAmount: potential80C,
-      maxLimit: 150000,
-      potentialSaving: Math.round(potentialSaving),
-      instruments: ['PPF', 'ELSS Mutual Funds', 'Life Insurance Premium', 'Home Loan Principal', 'NSC', 'Tax Saving FD']
+  if (!grossSalary || grossSalary <= 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Valid gross salary is required'
     });
   }
 
-  // Section 80D suggestion
-  const current80D = currentDeductions.section80d || 0;
-  if (current80D < 25000) {
-    const potential80D = 25000;
-    const potentialSaving = (potential80D - current80D) * 0.30;
+  // Generate personalized suggestions
+  const suggestions = generateDeductionSuggestions({
+    grossSalary,
+    currentDeductions,
+    age,
+    hasHealthInsurance,
+    hasHomeLoan,
+    isRenting,
+    cityType,
+    hasParents,
+    parentsAge
+  });
 
-    suggestions.push({
-      section: '80D',
-      title: 'Health Insurance Premium',
-      description: 'Medical insurance for self, family, and parents',
-      currentAmount: current80D,
-      suggestedAmount: potential80D,
-      maxLimit: 25000,
-      potentialSaving: Math.round(potentialSaving),
-      instruments: ['Health Insurance Premium', 'Preventive Health Check-up']
+  // Get investment deadlines
+  const deadlines = getInvestmentDeadlines();
+
+  res.status(200).json({
+    success: true,
+    data: {
+      ...suggestions,
+      deadlines,
+      generatedAt: new Date().toISOString()
+    }
+  });
+}));
+
+// @desc    Validate form data
+// @route   POST /api/enhanced-tax/validate
+// @access  Public
+router.post('/validate', catchAsync(async (req, res, next) => {
+  const { formData, form16Data, previousYearData } = req.body;
+
+  if (!formData) {
+    return res.status(400).json({
+      success: false,
+      message: 'Form data is required'
     });
   }
 
-  // NPS suggestion
-  const currentNPS = currentDeductions.nps || 0;
-  if (currentNPS < 50000) {
-    const potentialNPS = 50000;
-    const potentialSaving = (potentialNPS - currentNPS) * 0.30;
+  // Perform cross-field validation
+  const validationResult = crossFieldValidation(formData);
 
-    suggestions.push({
-      section: '80CCD(1B)',
-      title: 'National Pension System',
-      description: 'Additional NPS investment (over and above 80C limit)',
-      currentAmount: currentNPS,
-      suggestedAmount: potentialNPS,
-      maxLimit: 50000,
-      potentialSaving: Math.round(potentialSaving),
-      instruments: ['NPS Contribution']
-    });
+  // Check PAN if provided
+  let panValidation = null;
+  if (formData.pan) {
+    panValidation = validatePAN(formData.pan);
+  }
+
+  // Check document consistency if Form-16 data provided
+  let consistencyCheck = null;
+  if (form16Data) {
+    consistencyCheck = checkDocumentConsistency(form16Data, formData);
   }
 
   res.status(200).json({
     success: true,
     data: {
-      suggestions,
-      totalPotentialSaving: suggestions.reduce((sum, s) => sum + s.potentialSaving, 0),
-      message: suggestions.length > 0 
-        ? `You can potentially save ₹${suggestions.reduce((sum, s) => sum + s.potentialSaving, 0).toLocaleString()} in taxes`
-        : 'You are already maximizing your tax deductions!'
+      validation: validationResult,
+      panValidation,
+      consistencyCheck,
+      overallStatus: validationResult.isValid && (panValidation ? panValidation.isValid : true) ? 'valid' : 'invalid'
     }
   });
 }));
