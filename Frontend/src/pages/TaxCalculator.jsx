@@ -10,6 +10,8 @@ import apiClient from '../utils/api'
 import CalculatorGuide from '../components/CalculatorGuide'
 import TaxBreakdown from '../components/TaxBreakdown'
 import RebateExplainerTooltip from '../components/RebateExplainerTooltip'
+import MissedSavingsAlert from '../components/MissedSavingsAlert'
+import SmartSuggestions from '../components/SmartSuggestions'
 
 const taxFormSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -26,6 +28,8 @@ const TaxCalculator = ({ language }) => {
   const [results, setResults] = useState(null)
   const [loading, setLoading] = useState(false)
   const [showGuide, setShowGuide] = useState(false)
+  const [suggestions, setSuggestions] = useState(null)
+  const [showSmartSuggestions, setShowSmartSuggestions] = useState(false)
   
   const {
     register,
@@ -148,6 +152,35 @@ const TaxCalculator = ({ language }) => {
               finalTaxPayable: r.newRegime.finalTaxPayable || 0
             }
           })
+          
+          // Fetch smart deduction suggestions
+          try {
+            const suggestionsPayload = {
+              grossSalary: data.grossSalary,
+              currentDeductions: {
+                section80c: data.section80C,
+                section80d: data.section80D,
+                section24b: data.homeLoanInterest,
+                nps: 0,
+                other: data.otherDeductions
+              },
+              age: 30, // Default, can be added to form
+              hasHealthInsurance: data.section80D > 0,
+              hasHomeLoan: data.homeLoanInterest > 0,
+              isRenting: false, // Can be added to form
+              cityType: 'metro', // Can be added to form
+              hasParents: false, // Can be added to form
+              parentsAge: 0
+            }
+            
+            const suggestionsRes = await apiClient.post('/api/enhanced-tax/suggestions', suggestionsPayload)
+            if (suggestionsRes?.data?.success) {
+              setSuggestions(suggestionsRes.data.data)
+            }
+          } catch (suggestionsError) {
+            console.warn('Failed to fetch suggestions:', suggestionsError)
+          }
+          
           toast.success('Tax calculation completed with enhanced engine!')
           return
         }
@@ -413,6 +446,17 @@ const TaxCalculator = ({ language }) => {
         <div className="space-y-6">
           {results ? (
             <>
+              {/* Missed Savings Alert */}
+              {suggestions && suggestions.totalPotentialSavings > 0 && (
+                <MissedSavingsAlert
+                  totalSaving={suggestions.totalPotentialSavings}
+                  suggestions={suggestions.suggestions || []}
+                  urgency={suggestions.totalPotentialSavings > 30000 ? 'critical' : 'high'}
+                  onDismiss={() => setSuggestions(null)}
+                  onViewDetails={() => setShowSmartSuggestions(true)}
+                />
+              )}
+
               {/* Recommendation Card */}
               <div className={`bg-white rounded-xl shadow-lg p-6 border-l-4 ${
                 results.recommended === 'new' ? 'border-green-500' : 'border-blue-500'
@@ -658,6 +702,15 @@ const TaxCalculator = ({ language }) => {
               
               {/* Detailed Tax Breakdown - NEW FEATURE */}
               <TaxBreakdown data={results} regime={results.recommendedRegime || results.recommended} />
+              
+              {/* Smart Deduction Suggestions - AI-POWERED */}
+              {suggestions && (showSmartSuggestions || suggestions.totalPotentialSavings > 0) && (
+                <SmartSuggestions
+                  suggestions={suggestions.suggestions || []}
+                  totalPotentialSaving={suggestions.totalPotentialSavings || 0}
+                  stats={suggestions.summary || {}}
+                />
+              )}
             </>
           ) : (
             <div className="bg-white rounded-xl shadow-lg p-8 text-center">
